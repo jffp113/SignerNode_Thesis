@@ -26,8 +26,9 @@ type NetConfig struct {
 }
 
 type networkMessage struct {
-	to string
-	content []byte
+	To      peer.ID
+	From    peer.ID
+	Content []byte
 }
 
 type network struct {
@@ -49,8 +50,8 @@ type Network interface {
 func (n *network) Broadcast(msg []byte) error {
 
 	m := networkMessage{
-		to:      "",
-		content: msg,
+		To:      "",
+		Content: msg,
 	}
 	msgBytes, err := json.Marshal(m)
 	if err != nil {
@@ -80,7 +81,7 @@ func CreateNetwork(ctx context.Context,config NetConfig) (Network,error) {
 		return nil,err
 	}
 
-	logger.Infof("Peer will be available at /ip4/127.0.0.1/tcp/%v/p2p/%s",config.Port,h.ID().Pretty())
+	logger.Infof("Peer will be available at %v/p2p/%s",h.Addrs()[0],h.ID().Pretty())
 
 	disc,err := discovery.SetupDiscovery()
 
@@ -116,7 +117,7 @@ func CreateNetwork(ctx context.Context,config NetConfig) (Network,error) {
 
 	go processIncomingMsg(network)
 
-	//showConnectedListPeers(network)
+	showConnectedListPeers(network)
 
 	return network,nil
 }
@@ -137,13 +138,14 @@ func processIncomingMsg(n *network){
 			continue
 		}
 
-		cm := networkMessage{}
+		cm := new(networkMessage)
 		err = json.Unmarshal(msg.Data, &cm)
 		if err != nil {
 			continue
 		}
+
 		// send valid messages onto the Messages channel
-		n.messages <- cm.content
+		n.messages <- cm.Content
 	}
 }
 
@@ -151,14 +153,15 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 
 	logger.Debug("Creating Peer Host")
 
-	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v",config.Port)
+	//listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v",config.Port)
+	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v",0)
 
 	return libp2p.New(
 		context.Background(),
 		libp2p.ListenAddrStrings(listenAddr),
 		libp2p.ConnectionManager(connmgr.NewConnManager(
-			2,          // Lowwater
-			50,          // HighWater,
+			1,          // Lowwater
+			3,          // HighWater,
 			time.Minute, // GracePeriod
 		)),
 		//libp2p.Identity(*prvKey),
@@ -178,7 +181,7 @@ func showConnectedListPeers(n *network){
 	go func() {
 		for {
 
-			fmt.Println(n.ps.ListPeers("SignerNodeNetwork"))
+			fmt.Printf("PubSub: %v\n",n.ps.ListPeers("SignerNodeNetwork"))
 			time.Sleep(10 * time.Second)
 		}
 	}()

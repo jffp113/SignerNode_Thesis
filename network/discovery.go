@@ -109,7 +109,7 @@ func handlePeerFound(host host.Host ,pi peer.AddrInfo) {
 
 	err := host.Connect(context.Background(), pi)
 	if err != nil {
-		logger.Debugf("error connecting to peer %s: %s\n", pi.ID.Pretty(), err)
+		logger.Debugf("error connecting To peer %s: %s\n", pi.ID.Pretty(), err)
 	}
 }
 
