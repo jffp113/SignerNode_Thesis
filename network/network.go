@@ -172,7 +172,7 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 			idht, err = dht.New(ctx, h)
 			return idht, err
 		}),
-		libp2p.EnableAutoRelay(),*/
+		/*libp2p.EnableAutoRelay(),*/
 	)
 
 }
@@ -185,4 +185,23 @@ func showConnectedListPeers(n *network){
 			time.Sleep(10 * time.Second)
 		}
 	}()
+}
+
+func NewBootstrapNode(ctx context.Context,config NetConfig) error {
+	h,err := newPeerHost(config)
+
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+	logger.Infof("Bootstrap Node will be available at %v/p2p/%s",h.Addrs()[0],h.ID().Pretty())
+	discovery := NewDiscovery(ctx,h,config)
+	_,err = discovery.SetupDiscovery()
+
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+	return nil
+
 }

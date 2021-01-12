@@ -71,7 +71,7 @@ func (d *peerDiscovery) ConnectToBootstrapNodes() error {
 		go func() {
 			defer wg.Done()
 			if err := d.host.Connect(d.ctx, *peerinfo); err != nil {
-				logger.Warning(err)
+				logger.Warn(err)
 			} else {
 				logger.Info("Connection established with bootstrap node:", *peerinfo)
 			}
