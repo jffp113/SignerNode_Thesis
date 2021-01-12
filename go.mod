@@ -11,5 +11,9 @@ require (
 	github.com/libp2p/go-libp2p-kad-dht v0.5.0
 	github.com/libp2p/go-libp2p-pubsub v0.2.7
 	github.com/multiformats/go-multiaddr v0.2.1
+
 	go.dedis.ch/kyber/v3 v3.0.13
+
+	github.com/golang/protobuf v1.4.3
+	google.golang.org/protobuf v1.23.0
 )

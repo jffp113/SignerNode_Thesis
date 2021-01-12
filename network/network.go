@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
@@ -25,12 +24,6 @@ type NetConfig struct {
 	//ProtocolID       string
 }
 
-type networkMessage struct {
-	To      peer.ID
-	From    peer.ID
-	Content []byte
-}
-
 type network struct {
 	messages chan []byte
 
@@ -50,10 +43,12 @@ type Network interface {
 func (n *network) Broadcast(msg []byte) error {
 
 	m := networkMessage{
-		To:      "",
+		From: n.self,
 		Content: msg,
 	}
-	msgBytes, err := json.Marshal(m)
+
+	msgBytes, err := m.MarshalBinary()
+
 	if err != nil {
 		return err
 	}
@@ -129,6 +124,7 @@ func processIncomingMsg(n *network){
 		logger.Debugf("New message arrived from",msg.ReceivedFrom)
 
 		if err != nil {
+			logger.Debug(err)
 			close(n.messages)
 			return
 		}
@@ -139,7 +135,9 @@ func processIncomingMsg(n *network){
 		}
 
 		cm := new(networkMessage)
-		err = json.Unmarshal(msg.Data, &cm)
+		err = cm.UnmarshalBinary(msg.Data)
+
+		logger.Debug(cm)
 		if err != nil {
 			continue
 		}

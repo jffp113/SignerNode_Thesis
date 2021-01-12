@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package pb;
+
+message NetworkMessage {
+
+  //The address of the peer who sent the message
+  bytes from = 1;
+
+  //The address of the message destination
+  bytes to = 2;
+
+  // payload is the actual payload carried inside this network message.
+  bytes payload = 3;
+}

@@ -21,7 +21,7 @@ func main() {
 
 	n , _ :=network.CreateNetwork(context.Background(),network.NetConfig{
 		RendezvousString: "",
-		BootstrapPeers:   []string{"/ip4/127.0.0.1/tcp/57566/p2p/QmfHhbAc4HXGyzQPsvgdZm3HTcrWq9whDVkfsp1PhPWfTw"},
+		BootstrapPeers:   []string{"/ip4/127.0.0.1/tcp/55840/p2p/QmRmunGukdsZ1wXtN5av5KWVh4LK8xzHTK6V9HS9BJNhkK"},
 		Port:             55349,
 	})
 
