@@ -14,12 +14,12 @@ import (
 )
 
 type peerDiscovery struct {
-	ctx context.Context
-	host host.Host
+	ctx    context.Context
+	host   host.Host
 	config NetConfig
 }
 
-func NewDiscovery(ctx context.Context, host host.Host,config NetConfig) *peerDiscovery {
+func NewDiscovery(ctx context.Context, host host.Host, config NetConfig) *peerDiscovery {
 	return &peerDiscovery{
 		ctx,
 		host,
@@ -27,34 +27,33 @@ func NewDiscovery(ctx context.Context, host host.Host,config NetConfig) *peerDis
 	}
 }
 
-func (d *peerDiscovery) SetupDiscovery() (discovery.Discovery,error) {
-	logger.Debugf("Setting up Discovery bootstrap nodes:%v",d.config.BootstrapPeers)
+func (d *peerDiscovery) SetupDiscovery() (discovery.Discovery, error) {
+	logger.Debugf("Setting up Discovery bootstrap nodes:%v", d.config.BootstrapPeers)
 
 	kademliaDHT, err := dht.New(d.ctx, d.host)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	if err = kademliaDHT.Bootstrap(d.ctx); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	if err = d.ConnectToBootstrapNodes(); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	logger.Info("Announcing ourselves...")
 	routingDiscovery := discoverydht.NewRoutingDiscovery(kademliaDHT)
-
 
 	/* Uncomment for initial peer find
 	if d.findPeers(routingDiscovery) != nil {
 		return nil,err
 	}*/
 
-	showConnectedPeers(d.host)
+	//showConnectedPeers(d.host)
 
-	return routingDiscovery,nil
+	return routingDiscovery, nil
 }
 
 func (d *peerDiscovery) ConnectToBootstrapNodes() error {
@@ -82,7 +81,7 @@ func (d *peerDiscovery) ConnectToBootstrapNodes() error {
 	return nil
 }
 
-func  (d *peerDiscovery) findPeers(routingDiscovery *discoverydht.RoutingDiscovery) error {
+func (d *peerDiscovery) findPeers(routingDiscovery *discoverydht.RoutingDiscovery) error {
 	discoverydht.Advertise(d.ctx, routingDiscovery, "network")
 	logger.Debug("Successfully announced!")
 
@@ -96,7 +95,7 @@ func  (d *peerDiscovery) findPeers(routingDiscovery *discoverydht.RoutingDiscove
 
 	go func() {
 		for addr := range peerChan {
-			handlePeerFound(d.host,addr)
+			handlePeerFound(d.host, addr)
 		}
 		logger.Info("Finished Searching")
 	}()
@@ -104,7 +103,7 @@ func  (d *peerDiscovery) findPeers(routingDiscovery *discoverydht.RoutingDiscove
 	return nil
 }
 
-func handlePeerFound(host host.Host ,pi peer.AddrInfo) {
+func handlePeerFound(host host.Host, pi peer.AddrInfo) {
 	logger.Debugf("Discovered new peer %s\n", pi.ID.Pretty())
 
 	err := host.Connect(context.Background(), pi)
@@ -113,7 +112,7 @@ func handlePeerFound(host host.Host ,pi peer.AddrInfo) {
 	}
 }
 
-func showConnectedPeers(host host.Host){
+func showConnectedPeers(host host.Host) {
 	go func() {
 		for {
 			fmt.Println(host.Peerstore().Peers())

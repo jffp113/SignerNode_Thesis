@@ -19,7 +19,7 @@ const NetworkBufSize = 128
 type NetConfig struct {
 	RendezvousString string
 	BootstrapPeers   []string
-	Port int
+	Port             int
 	//ListenAddresses  addrList
 	//ProtocolID       string
 }
@@ -31,7 +31,7 @@ type network struct {
 	ps    *pubsub.PubSub
 	topic *pubsub.Topic
 	sub   *pubsub.Subscription
-	self     peer.ID
+	self  peer.ID
 }
 
 type Network interface {
@@ -43,7 +43,7 @@ type Network interface {
 func (n *network) Broadcast(msg []byte) error {
 
 	m := networkMessage{
-		From: n.self,
+		From:    n.self,
 		Content: msg,
 	}
 
@@ -65,63 +65,62 @@ func (n *network) Receive() []byte {
 	return <-n.messages
 }
 
-
-func CreateNetwork(ctx context.Context,config NetConfig) (Network,error) {
+func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 	logger.Debug("Setting up Network")
-	h,err := newPeerHost(config)
-	discovery := NewDiscovery(ctx,h,config)
+	h, err := newPeerHost(config)
+	discovery := NewDiscovery(ctx, h, config)
 
 	if err != nil {
 		logger.Error(err)
-		return nil,err
+		return nil, err
 	}
 
-	logger.Infof("Peer will be available at %v/p2p/%s",h.Addrs()[0],h.ID().Pretty())
+	logger.Infof("Peer will be available at %v/p2p/%s", h.Addrs()[0], h.ID().Pretty())
 
-	disc,err := discovery.SetupDiscovery()
+	disc, err := discovery.SetupDiscovery()
 
 	if err != nil {
 		logger.Error(err)
-		return nil,err
+		return nil, err
 	}
 
-	ps,err := pubsub.NewGossipSub(ctx,h,pubsub.WithDiscovery(disc))
+	ps, err := pubsub.NewGossipSub(ctx, h, pubsub.WithDiscovery(disc))
 
 	topic, err := ps.Join("SignerNodeNetwork")
 
 	if err != nil {
 		logger.Error(err)
-		return nil,err
+		return nil, err
 	}
 
-	sub,err := topic.Subscribe()
+	sub, err := topic.Subscribe()
 
 	if err != nil {
 		logger.Error(err)
-		return nil,err
+		return nil, err
 	}
 
 	network := &network{
-		messages: make(chan []byte,NetworkBufSize),
+		messages: make(chan []byte, NetworkBufSize),
 		ctx:      ctx,
 		ps:       ps,
 		topic:    topic,
 		sub:      sub,
-		self: h.ID(),
+		self:     h.ID(),
 	}
 
 	go processIncomingMsg(network)
 
-	showConnectedListPeers(network)
+	//showConnectedListPeers(network)
 
-	return network,nil
+	return network, nil
 }
 
-func processIncomingMsg(n *network){
-	for{
+func processIncomingMsg(n *network) {
+	for {
 		logger.Debug("Waiting for new message")
-		msg,err := n.sub.Next(n.ctx)
-		logger.Debugf("New message arrived from",msg.ReceivedFrom)
+		msg, err := n.sub.Next(n.ctx)
+		logger.Debugf("New message arrived from", msg.ReceivedFrom)
 
 		if err != nil {
 			logger.Debug(err)
@@ -137,8 +136,8 @@ func processIncomingMsg(n *network){
 		cm := new(networkMessage)
 		err = cm.UnmarshalBinary(msg.Data)
 
-		logger.Debug(cm)
 		if err != nil {
+			logger.Error(err)
 			continue
 		}
 
@@ -152,14 +151,14 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 	logger.Debug("Creating Peer Host")
 
 	//listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v",config.Port)
-	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v",0)
+	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v", 0)
 
 	return libp2p.New(
 		context.Background(),
 		libp2p.ListenAddrStrings(listenAddr),
 		libp2p.ConnectionManager(connmgr.NewConnManager(
-			1,          // Lowwater
-			3,          // HighWater,
+			1,           // Lowwater
+			3,           // HighWater,
 			time.Minute, // GracePeriod
 		)),
 		//libp2p.Identity(*prvKey),
@@ -175,26 +174,26 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 
 }
 
-func showConnectedListPeers(n *network){
+func showConnectedListPeers(n *network) {
 	go func() {
 		for {
 
-			fmt.Printf("PubSub: %v\n",n.ps.ListPeers("SignerNodeNetwork"))
+			fmt.Printf("PubSub: %v\n", n.ps.ListPeers("SignerNodeNetwork"))
 			time.Sleep(10 * time.Second)
 		}
 	}()
 }
 
-func NewBootstrapNode(ctx context.Context,config NetConfig) error {
-	h,err := newPeerHost(config)
+func NewBootstrapNode(ctx context.Context, config NetConfig) error {
+	h, err := newPeerHost(config)
 
 	if err != nil {
 		logger.Error(err)
 		return err
 	}
-	logger.Infof("Bootstrap Node will be available at %v/p2p/%s",h.Addrs()[0],h.ID().Pretty())
-	discovery := NewDiscovery(ctx,h,config)
-	_,err = discovery.SetupDiscovery()
+	logger.Infof("Bootstrap Node will be available at %v/p2p/%s", h.Addrs()[0], h.ID().Pretty())
+	discovery := NewDiscovery(ctx, h, config)
+	_, err = discovery.SetupDiscovery()
 
 	if err != nil {
 		logger.Error(err)

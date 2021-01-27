@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package pb;
+
+message ProtocolMessage {
+
+  enum Type {
+    DEFAULT = 0;
+    SIGN_REQUEST = 100;
+    SIGN_RESPONSE = 101;
+  }
+
+  Type type = 1;
+
+  string correlation_id = 2;
+
+  bytes content = 4;
+
+}
+
+message ClientMessage{
+  string UUID = 1;
+  string SmartContract = 2;
+  uint32 t = 3;
+  uint32 n = 4;
+  string Scheme = 5;
+  bytes content = 6;
+}
+
+message SignResponse{
+  string UUID = 1;
+  bytes signature = 2;
+}
