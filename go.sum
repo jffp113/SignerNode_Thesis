@@ -160,8 +160,8 @@ github.com/jbenet/goprocess v0.1.4/go.mod h1:5yspPrukOVuOLORacaBi858NqyClJPQxYZl
 github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jessevdk/go-flags v1.4.0 h1:4IU2WS7AumrZ/40jfhf4QVDMsQwqA7VEHozFRrGARJA=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
-github.com/jffp113/CryptoProviderSDK v0.0.3 h1:CTEDx0rdIz/2EOZkq2nSgJE04HpVuWH+pdNnnIgMKSI=
-github.com/jffp113/CryptoProviderSDK v0.0.3/go.mod h1:g2MFjic2H6ExqzwIsAVTVC4A3hPimo1nNZaTN6rnh8k=
+github.com/jffp113/CryptoProviderSDK v0.0.5 h1:/PApVkCUubEDxPtsV+DcIsBAv+5yDGHF8VWtkxJKVx4=
+github.com/jffp113/CryptoProviderSDK v0.0.5/go.mod h1:g2MFjic2H6ExqzwIsAVTVC4A3hPimo1nNZaTN6rnh8k=
 github.com/jrick/logrotate v1.0.0/go.mod h1:LNinyqDIJnpAur+b8yyulnQw/wDuN1+BYKlTRt3OuAQ=
 github.com/kami-zh/go-capturer v0.0.0-20171211120116-e492ea43421d/go.mod h1:P2viExyCEfeWGU259JnaQ34Inuec4R38JCyBx2edgD0=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=

@@ -7,12 +7,20 @@ import (
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
 	"sync"
+	"time"
 )
 
 type permissionedProtocol struct {
-	requests map[string]*request
-	crypto   crypto.ContextFactory
-	keychain keychain.KeyChain
+	requestLock sync.Mutex
+	requests    map[string]*request
+	crypto      crypto.ContextFactory
+	keychain    keychain.KeyChain
+}
+
+func (p *permissionedProtocol) addRequest(req *request, uuid string) {
+	p.requestLock.Lock()
+	p.requests[uuid] = req
+	p.requestLock.Unlock()
 }
 
 type request struct {
@@ -21,13 +29,45 @@ type request struct {
 	shares       [][]byte
 	t, n         int
 	scheme       string
+	uuid string
 	digest		[]byte
 }
 
 func (r *request) AddSig(sig []byte) {
 	r.lock.Lock()
-	r.shares = append(r.shares, sig)
+	r.shares = append(r.shares,sig)
 	r.lock.Unlock()
+}
+
+func (r *permissionedProtocol) AddSigTestAndRemoveFromRequests(sig []byte, uuid string) (*request,bool){
+	//Lock so no one removes things from requests
+	r.requestLock.Lock()
+	defer r.requestLock.Unlock()
+	//See if the request exists
+	v,ok := r.requests[uuid]
+
+	if !ok {
+		//Does not exist returns false
+		//This can mean to things, request already fulfilled or
+		//request is not for this signer node
+		return nil,false
+	}
+
+	//Lock request so no one changes the shares
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	//Add the share
+	v.shares = append(v.shares, sig)
+
+	enoughShares := len(v.shares) >= v.t
+
+	if enoughShares {
+		logger.Debugf("Removing request with uuid %v",uuid)
+		delete(r.requests,uuid)
+	}
+
+
+	return v, enoughShares
 }
 
 func (p *permissionedProtocol) ProcessMessage(data []byte, ctx processContext) {
@@ -47,7 +87,6 @@ func (p *permissionedProtocol) ProcessMessage(data []byte, ctx processContext) {
 
 func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessage, ctx processContext) {
 	logger.Debug("Received Sign Response")
-	//TODO if reply to sign add to a list when enough shares aggregate and send to the blockchain
 	signatureMsg := pb.SignResponse{}
 
 	err := proto.Unmarshal(req.Content, &signatureMsg)
@@ -58,18 +97,10 @@ func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessag
 		return
 	}
 
-	//Verify that the sign context belongs to this node
-	v, ok := p.requests[signatureMsg.UUID]
+	//Check if can aggregate if yes start other
+	if v, ready := p.AddSigTestAndRemoveFromRequests(signatureMsg.Signature,signatureMsg.UUID); ready {
 
-	if !ok {
-		logger.Debug("Sign response not for here ignoring")
-		return //Discard message
-	}
-
-	//Append share and verify if have enough shares
-	v.AddSig(signatureMsg.Signature)
-	if len(v.shares) >= v.t {
-		//TODO aggregate signatures and
+		logger.Debugf("Aggregating request %v",v)
 		fullSig, err := p.aggregateShares(v)
 
 		if err != nil {
@@ -77,10 +108,11 @@ func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessag
 			logger.Error(err)
 			return
 		}
-		logger.Infof("Signature was produced: %v",fullSig)
+		logger.Debugf("Signature was produced: %v",fullSig)
 		//TODO send message to the blockchain proxy
 		//TODO when the proxy awnsers send a msg to the client
 		v.responseChan <- []byte("ok")
+		close(v.responseChan)
 	}
 }
 
@@ -130,14 +162,16 @@ func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
 		return
 	}
 
-	p.requests[req.UUID] = &request{
+	request := &request{
 		responseChan: ctx.returnChan,
 		shares:       make([][]byte, 0),
 		t:            int(req.T),
 		n:            int(req.N),
 		scheme:       req.Scheme,
 		digest:       req.Content,
+		uuid: req.UUID,
 	}
+	p.addRequest(request, req.UUID)
 
 	signReq, err := createProtocolMessage(data, pb.ProtocolMessage_SIGN_REQUEST)
 
@@ -157,7 +191,6 @@ func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
 		return
 	}
 
-	request := p.requests[req.UUID]
 	request.AddSig(sigShare)
 }
 
@@ -171,7 +204,8 @@ func (p *permissionedProtocol) signWithShare(req *pb.ClientMessage) ([]byte, err
 		return nil, err
 	}
 
-	context := p.crypto.GetSignerVerifierAggregator(req.Scheme)
+	context, closer := p.crypto.GetSignerVerifierAggregator(req.Scheme)
+	defer closer.Close()
 	b, err := context.Sign(req.Content, privShare)
 
 	if err != nil {
@@ -192,7 +226,8 @@ func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
 		return nil, err
 	}
 
-	context := p.crypto.GetSignerVerifierAggregator(req.scheme)
+	context,closer := p.crypto.GetSignerVerifierAggregator(req.scheme)
+	defer closer.Close()
 	//b, err := context.Sign(req.Content, privShare)
 
 	fullSig, err := context.Aggregate(req.shares,req.digest,pubKey,req.t,req.n)
@@ -206,11 +241,23 @@ func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
 }
 
 func NewPermissionedProtocol(crypto crypto.ContextFactory, keychain keychain.KeyChain) Protocol {
-	return &permissionedProtocol{
+	p := permissionedProtocol{
 		requests: make(map[string]*request),
 		crypto:   crypto,
 		keychain: keychain,
 	}
+
+	go func() {//TODO remove in the final version
+		for {
+			time.Sleep(10 * time.Second)
+			fmt.Println("Printing Requests")
+			for _,v := range p.requests {
+				fmt.Println(v)
+			}
+		}
+	}()
+
+	return &p
 }
 
 func createProtocolMessage(msg []byte, messageType pb.ProtocolMessage_Type) ([]byte, error) {

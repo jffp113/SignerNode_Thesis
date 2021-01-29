@@ -6,6 +6,7 @@ import (
 	"github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -20,6 +21,7 @@ type NetConfig struct {
 	RendezvousString string
 	BootstrapPeers   []string
 	Port             int
+	Priv 		crypto.PrivKey
 	//ListenAddresses  addrList
 	//ProtocolID       string
 }
@@ -57,7 +59,7 @@ func (n *network) Broadcast(msg []byte) error {
 }
 
 func (n *network) Send(node string, msg []byte) {
-
+	//todo
 }
 
 func (n *network) Receive() []byte {
@@ -150,8 +152,7 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 
 	logger.Debug("Creating Peer Host")
 
-	//listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v",config.Port)
-	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v", 0)
+	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v", config.Port)
 
 	return libp2p.New(
 		context.Background(),
@@ -161,15 +162,7 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 			3,           // HighWater,
 			time.Minute, // GracePeriod
 		)),
-		//libp2p.Identity(*prvKey),
-		//libp2p.Security(libp2ptls.ID, libp2ptls.New),
-		//libp2p.DefaultTransports,
-		//libp2p.NATPortMap(),
-		/*libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
-			idht, err = dht.New(ctx, h)
-			return idht, err
-		}),
-		/*libp2p.EnableAutoRelay(),*/
+		libp2p.Identity(config.Priv),
 	)
 
 }

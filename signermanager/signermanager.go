@@ -9,7 +9,7 @@ import (
 	ctx "golang.org/x/net/context"
 )
 
-const DefaultNumberOfWorkers = 5
+const DefaultNumberOfWorkers = 10
 const MessageWorkerChanSize = 20
 
 var logger = log.Logger("protocol")
@@ -130,9 +130,11 @@ func (s *signermanager) startWorkers() {
 			for {
 				select {
 				case data := <-s.workPool:
+					logger.Debug("Start Processing Worker")
 					s.protocol.ProcessMessage(data, processContext{
 						s.network.Broadcast,
 					})
+					logger.Debug("Finish Processing Worker")
 				case _ = <-s.context.Done():
 					return
 				}
@@ -144,9 +146,9 @@ func (s *signermanager) startWorkers() {
 func (s *signermanager) startNetworkReceiver() {
 	go func() {
 		for {
-			logger.Debug("Waiting for messages")
+			logger.Debug("Waiting for messages to the protocol")
 			s.workPool <- s.network.Receive()
-			logger.Debug("Received message")
+			logger.Debug("Received message to the protocol")
 		}
 	}()
 }

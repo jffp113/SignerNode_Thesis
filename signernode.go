@@ -12,7 +12,7 @@ import (
 type Opts struct {
 	//Verbose []bool `short:"v" long:"verbose" description:"Increase verbosity"`
 	ApiPort       int    `short:"p" long:"port" description:"API Port" default:"8080"`
-	SignerURI     string `short:"s" long:"signer" description:"Signer URI" default:"tcp://127.0.0.1:9000"`
+	SignerURI     string `short:"s" long:"signer" description:"Signer URI" default:"tcp://eth0:9000"`
 	BootstrapNode string `short:"b" long:"bootstrap" description:"Boostrap Node to find other signer nodes"`
 	KeyPath       string `short:"k" long:"keys" description:"Path for the private key and public key" default:"./resources/"`
 	Protocol      string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
