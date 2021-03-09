@@ -12,10 +12,11 @@ docker build -t signernode -f Docker/Dockerfile .
 
 After building the project and the dependencies:
 - Crypto Provider
-- ...
+- SmartContract 
 - ...
 
 you can run by executing the following command:
+
 
 ```bash
 docker-compose  -f Docker/docker-compose.yaml up

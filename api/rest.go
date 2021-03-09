@@ -1,6 +1,7 @@
 package api
 
 import (
+	"SignerNode/signermanager"
 	"fmt"
 	"github.com/ipfs/go-log"
 	"io/ioutil"
@@ -9,7 +10,7 @@ import (
 
 var logger = log.Logger("api")
 
-func signHandler(w http.ResponseWriter, r *http.Request, f func(data []byte) <-chan []byte) {
+func signHandler(w http.ResponseWriter, r *http.Request, f func(data []byte) <-chan signermanager.ManagerResponse) {
 
 	switch r.Method {
 	case http.MethodPost:
@@ -17,15 +18,20 @@ func signHandler(w http.ResponseWriter, r *http.Request, f func(data []byte) <-c
 
 		fmt.Println(b)
 		respChan := f(b)
-		respBytes := <-respChan
+		resp := <-respChan
 
-		w.Write(respBytes)
+		switch resp.ResponseStatus {
+			case signermanager.Ok:
+				w.WriteHeader(202)
+			case signermanager.Error:
+				w.WriteHeader(500)
+		}
 	default:
 		w.WriteHeader(405)
 	}
 }
 
-func Init(port int, f func(data []byte) <-chan []byte) {
+func Init(port int, f func(data []byte) <-chan signermanager.ManagerResponse) {
 	http.HandleFunc("/sign", func(writer http.ResponseWriter, request *http.Request) {
 		signHandler(writer, request, f)
 	})

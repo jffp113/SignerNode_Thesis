@@ -14,6 +14,7 @@ require (
 	github.com/libp2p/go-libp2p-kad-dht v0.5.0
 	github.com/libp2p/go-libp2p-pubsub v0.2.7
 	github.com/multiformats/go-multiaddr v0.2.1
+	github.com/pebbe/zmq4 v1.2.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.7.0
 	go.dedis.ch/kyber/v3 v3.0.13

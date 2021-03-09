@@ -20,10 +20,10 @@ message ProtocolMessage {
 
 message ClientMessage{
   string UUID = 1;
-  string SmartContract = 2;
-  uint32 t = 3;
-  uint32 n = 4;
-  string Scheme = 5;
+  string SmartContractAddress = 2;
+  //uint32 t = 3;
+  //uint32 n = 4;
+  //string Scheme = 5;
   bytes content = 6;
 }
 

@@ -15,11 +15,8 @@ func main() {
 	uuid := fmt.Sprint(uuid.NewV4())
 	msg:=pb.ClientMessage{
 		UUID:          fmt.Sprint(uuid),
-		SmartContract: "none",
-		T:             3,
-		N:             5,
-		Scheme:        "TBLS256",
 		Content:       []byte("Hello"),
+		SmartContractAddress: "intkey",
 	}
 
 	b,err := proto.Marshal(&msg)
@@ -39,6 +36,4 @@ func main() {
 	}
 
 	fmt.Println(resp)
-
-
 }

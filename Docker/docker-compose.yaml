@@ -25,7 +25,7 @@ services:
       - 55000
     command: ./main_bootstrap
 
-#-------------=== signer node
+# -------------=== signer node ===-------------
   signernode-1:
     image: signernode
     container_name: signernode-1
@@ -34,7 +34,7 @@ services:
       - 9000
     ports:
       - "8080:8080"
-    command: ./signernode -k ./resources/keys/1/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B
+    command: ./signernode -k ./resources/keys/1/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-2:
@@ -43,7 +43,7 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B
+    command: ./signernode -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-3:
@@ -52,7 +52,7 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B
+    command: ./signernode -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-4:
@@ -61,7 +61,7 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B
+    command: ./signernode -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-5:
@@ -70,12 +70,12 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/5/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B
+    command: ./signernode -k ./resources/keys/5/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
 
 
-#######crypto
+# -------------=== crypto ===-------------
   crypto-1:
     image: crypto
     container_name: crypto-1
@@ -104,5 +104,38 @@ services:
     image: crypto
     container_name: crypto-5
     command:  bash -c "sleep 3; ./main -u tcp://signernode-5:9000"
+    depends_on:
+      - signernode-5
+
+# -------------=== smartcontract ===-------------
+
+  smartcontract-1:
+    image: sawtooth-smartcontract
+    container_name: smartcontract-1
+    command: intkey-tp-go -vv -C tcp://signernode-1:4004
+    depends_on:
+      - signernode-1
+  smartcontract-2:
+    image: sawtooth-smartcontract
+    container_name: smartcontract-2
+    command: intkey-tp-go -vv -C tcp://signernode-2:4004
+    depends_on:
+      - signernode-2
+  smartcontract-3:
+    image: sawtooth-smartcontract
+    container_name: smartcontract-3
+    command: intkey-tp-go -vv -C tcp://signernode-3:4004
+    depends_on:
+      - signernode-3
+  smartcontract-4:
+    image: sawtooth-smartcontract
+    container_name: smartcontract-4
+    command: intkey-tp-go -vv -C tcp://signernode-4:4004
+    depends_on:
+      - signernode-4
+  smartcontract-5:
+    image: sawtooth-smartcontract
+    container_name: smartcontract-5
+    command: intkey-tp-go -vv -C tcp://signernode-5:4004
     depends_on:
       - signernode-5

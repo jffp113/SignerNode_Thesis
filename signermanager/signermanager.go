@@ -2,6 +2,7 @@ package signermanager
 
 import (
 	"SignerNode/network"
+	"SignerNode/smartcontractengine"
 	"github.com/ipfs/go-log"
 	"github.com/jffp113/CryptoProviderSDK/client"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
@@ -37,22 +38,19 @@ type signermanager struct {
 	context ctx.Context
 
 	//Context to the distributed cryptoProvider
-	factory   crypto.ContextFactory
-	signerURI string
+	cryptoFactory crypto.ContextFactory
+	signerURI     string
+
+	//Context to execute smartcontracts
+	scFactory smartcontractengine.SCContextFactory
+	scURI string
 }
 
 func NewSignerManager() *signermanager {
 	return &signermanager{
-		bootstrapNode: "",
-		keyPath:       "",
-		protocolName:  "",
-		protocol:      nil,
-		network:       nil,
 		workPool:      make(chan []byte, MessageWorkerChanSize),
 		numWorkers:    DefaultNumberOfWorkers,
 		context:       ctx.Background(),
-		factory:       nil,
-		signerURI:     "",
 	}
 }
 
@@ -72,6 +70,10 @@ func (s *signermanager) SetSignerURI(uri string) {
 	s.signerURI = uri
 }
 
+func (s *signermanager) SetScURI(uri string) {
+	s.scURI = uri
+}
+
 func (s *signermanager) Init() error {
 	net, err := network.CreateNetwork(s.context, network.NetConfig{
 		BootstrapPeers: []string{s.bootstrapNode},
@@ -87,11 +89,17 @@ func (s *signermanager) Init() error {
 		return err
 	}
 
-	s.factory = factory
+	s.cryptoFactory = factory
 
 	s.keychain = keychain.NewKeyChain(s.keyPath)
 
-	p, err := GetProtocol(s.protocolName, s.factory, s.keychain)
+	s.scFactory,err = smartcontractengine.NewSmartContractClientFactory(s.scURI)
+
+	if err != nil {
+		return err
+	}
+
+	p, err := GetProtocol(s.protocolName, s.cryptoFactory, s.keychain, s.scFactory)
 
 	if err != nil {
 		return err
@@ -106,7 +114,7 @@ func (s *signermanager) Init() error {
 }
 
 type signContext struct {
-	returnChan chan<- []byte
+	returnChan chan<- ManagerResponse
 	broadcast  func(msg []byte) error
 }
 
@@ -114,8 +122,8 @@ type processContext struct {
 	broadcast func(msg []byte) error
 }
 
-func (s *signermanager) Sign(data []byte) <-chan []byte {
-	ch := make(chan []byte, 1) //TODO maybe a pool of protocol workers?
+func (s *signermanager) Sign(data []byte) <-chan ManagerResponse {
+	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
 	go s.protocol.Sign(data, signContext{
 		returnChan: ch,
 		broadcast:  s.network.Broadcast,

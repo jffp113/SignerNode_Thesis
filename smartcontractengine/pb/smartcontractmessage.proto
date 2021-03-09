@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option go_package = "pb";
+
+
+// The message passed between the smartcontract client and smartcontract engine
+message Message {
+
+    enum MessageType {
+        DEFAULT = 0;
+
+        SMART_CONTRACT_VALIDATE_REQUEST = 1000;
+        SMART_CONTRACT_VALIDATE_RESPONSE = 1001;
+        SMART_CONTRACT_REGISTER_REQUEST = 1002;
+        SMART_CONTRACT_REGISTER_RESPONSE = 1003;
+    }
+    // The type of message, used to determine how to 'route' the message
+    // to the appropriate handler as well as how to deserialize the
+    // content.
+    MessageType message_type = 1;
+
+    // The identifier used to correlate response messages to their related
+    // request messages.  correlation_id should be set to a random string
+    // for messages which are not responses to previously sent messages.  For
+    // response messages, correlation_id should be set to the same string as
+    // contained in the request message.
+    string correlation_id = 2;
+
+    // The content of the message, defined by message_type.  In many
+    // cases, this data has been serialized with Protocol Buffers or
+    // CBOR.
+    bytes content = 3;
+
+    string handler_id = 4;
+
+}
