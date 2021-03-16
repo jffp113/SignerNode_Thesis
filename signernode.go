@@ -19,6 +19,7 @@ type Opts struct {
 	Protocol      string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
 }
 
+
 func main() {
 	var opts Opts
 
@@ -52,13 +53,13 @@ func main() {
 	_ = log.SetLogLevel("dht", "warn")
 
 
-	//Set configs in signermanager
-	sm := signermanager.NewSignerManager()
-	sm.SetBootStrapNode(opts.BootstrapNode)
-	sm.SetKeyPath(opts.KeyPath)
-	sm.SetProtocol(opts.Protocol)
-	sm.SetSignerURI(opts.SignerURI)
-	sm.SetScURI(opts.ScURI)
+	sm := signermanager.NewSignerManager(
+			signermanager.SetBootStrapNode(opts.BootstrapNode),
+			signermanager.SetKeyPath(opts.KeyPath),
+			signermanager.SetProtocol(opts.Protocol),
+			signermanager.SetSignerURI(opts.SignerURI),
+			signermanager.SetScURI(opts.ScURI),
+		)
 
 	//Initiate signermanager
 	err = sm.Init()
@@ -68,5 +69,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	api.Init(opts.ApiPort, sm.Sign)
+	api.Init(opts.ApiPort, sm.Sign,sm.Verify,api.ConvertToGeneric(sm.GetMembership))
 }

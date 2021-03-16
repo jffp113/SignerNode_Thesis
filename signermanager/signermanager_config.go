@@ -1,0 +1,39 @@
+package signermanager
+
+type Config func(m *signermanager) error
+
+
+func SetBootStrapNode(bootstrap string) Config {
+	return func(m *signermanager) error {
+		m.bootstrapNode = bootstrap
+		return nil
+	}
+}
+
+func SetKeyPath(keyPath string) Config{
+	return func(m *signermanager) error {
+		m.keyPath = keyPath
+		return nil
+	}
+}
+
+func SetProtocol(protocol string) Config{
+	return func(m *signermanager) error {
+		m.protocolName = protocol
+		return nil
+	}
+}
+
+func SetSignerURI(uri string) Config{
+	return func(m *signermanager) error {
+		m.signerURI = uri
+		return nil
+	}
+}
+
+func SetScURI(uri string) Config{
+	return func(m *signermanager) error {
+		m.scURI = uri
+		return nil
+	}
+}

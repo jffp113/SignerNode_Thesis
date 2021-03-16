@@ -17,6 +17,7 @@ type peerDiscovery struct {
 	ctx    context.Context
 	host   host.Host
 	config NetConfig
+	discovery discovery.Discovery
 }
 
 func NewDiscovery(ctx context.Context, host host.Host, config NetConfig) *peerDiscovery {
@@ -24,6 +25,7 @@ func NewDiscovery(ctx context.Context, host host.Host, config NetConfig) *peerDi
 		ctx,
 		host,
 		config,
+		nil,
 	}
 }
 
@@ -46,12 +48,15 @@ func (d *peerDiscovery) SetupDiscovery() (discovery.Discovery, error) {
 	logger.Info("Announcing ourselves...")
 	routingDiscovery := discoverydht.NewRoutingDiscovery(kademliaDHT)
 
+	discoverydht.Advertise(d.ctx, routingDiscovery, "network")
+
 	/* Uncomment for initial peer find
 	if d.findPeers(routingDiscovery) != nil {
 		return nil,err
 	}*/
 
 	//showConnectedPeers(d.host)
+	d.discovery = routingDiscovery
 
 	return routingDiscovery, nil
 }
@@ -79,6 +84,33 @@ func (d *peerDiscovery) ConnectToBootstrapNodes() error {
 	wg.Wait()
 
 	return nil
+}
+
+func (d *peerDiscovery) GetBootstrapPeers() []ma.Multiaddr {
+	bcap := len(d.config.BootstrapPeers)
+	result := make([]ma.Multiaddr,0,bcap)
+
+	for _,v := range d.config.BootstrapPeers {
+		addr,_ := ma.NewMultiaddr(v)
+		result = append(result, addr)
+	}
+
+	return result
+}
+
+func (d *peerDiscovery) GetPeers() []peer.AddrInfo{
+	peerChan, err := d.discovery.FindPeers(context.Background(), "network")
+
+	var peers []peer.AddrInfo
+
+	logger.Debug("Discovering peers",err)
+	for v := range peerChan {
+		logger.Debug(v)
+		peers = append(peers, v)
+	}
+
+
+	return peers
 }
 
 func (d *peerDiscovery) findPeers(routingDiscovery *discoverydht.RoutingDiscovery) error {

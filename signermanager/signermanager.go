@@ -2,7 +2,9 @@ package signermanager
 
 import (
 	"SignerNode/network"
+	"SignerNode/signermanager/pb"
 	"SignerNode/smartcontractengine"
+	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-log"
 	"github.com/jffp113/CryptoProviderSDK/client"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
@@ -46,32 +48,19 @@ type signermanager struct {
 	scURI string
 }
 
-func NewSignerManager() *signermanager {
-	return &signermanager{
+func NewSignerManager(confs ...Config) *signermanager {
+	manager := &signermanager{
 		workPool:      make(chan []byte, MessageWorkerChanSize),
 		numWorkers:    DefaultNumberOfWorkers,
 		context:       ctx.Background(),
 	}
-}
 
-func (s *signermanager) SetBootStrapNode(bootstrap string) {
-	s.bootstrapNode = bootstrap
-}
+	for _,v := range confs {
+		_ = v(manager)
+	}
 
-func (s *signermanager) SetKeyPath(keyPath string) {
-	s.keyPath = keyPath
-}
+	return manager
 
-func (s *signermanager) SetProtocol(protocol string) {
-	s.protocolName = protocol
-}
-
-func (s *signermanager) SetSignerURI(uri string) {
-	s.signerURI = uri
-}
-
-func (s *signermanager) SetScURI(uri string) {
-	s.scURI = uri
 }
 
 func (s *signermanager) Init() error {
@@ -131,6 +120,48 @@ func (s *signermanager) Sign(data []byte) <-chan ManagerResponse {
 
 	return ch
 }
+
+func (s *signermanager) Verify(data []byte) <-chan ManagerResponse {
+	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
+
+	go func() {
+		msg := pb.ClientVerifyMessage{}
+		err := proto.Unmarshal(data,&msg)
+
+		if err != nil {
+			ch<-ManagerResponse{Error,
+								nil,
+								err}
+		}
+
+		context,c := s.cryptoFactory.GetSignerVerifierAggregator(msg.Scheme)
+		defer c.Close()
+		pubKey := keychain.ConvertBytesToPubKey(msg.PublicKey)
+		err = context.Verify(msg.Signature, msg.Digest, pubKey)
+
+		if err != nil {
+			createInvalidMessageVerifyResponse(ch)
+			return
+		}
+
+		createValidMessageVerifyMessages(ch)
+	}()
+
+	return ch
+}
+
+
+func (s *signermanager) GetMembership() <-chan ManagerResponse {
+	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
+	//TODO
+
+	go func() {
+		createValidMembershipResponse(s.network.GetMembership(),ch)
+	}()
+
+	return ch
+}
+
 
 func (s *signermanager) startWorkers() {
 	for i := 0; i < s.numWorkers; i++ {

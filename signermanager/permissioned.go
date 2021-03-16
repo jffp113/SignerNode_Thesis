@@ -111,13 +111,14 @@ func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessag
 			return
 		}
 		logger.Debugf("Signature was produced: %v",fullSig)
-		//TODO send message to the blockchain proxy
-		//TODO when the proxy awnsers send a msg to the client
 
-		v.responseChan <- ManagerResponse{
-			ResponseStatus: Ok,
-			err:            nil,
+		resp := pb.ClientSignResponse{
+			Scheme:    v.scheme,
+			Signature: fullSig,
 		}
+		bytes,err := proto.Marshal(&resp)
+
+		sendOkMessage(v.responseChan,bytes)
 
 		close(v.responseChan)
 	}
@@ -125,7 +126,7 @@ func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessag
 
 func (p *permissionedProtocol) processMessageSignRequest(req *pb.ProtocolMessage, ctx processContext) {
 	logger.Debug("Received Sign Request")
-	reqSign := pb.ClientMessage{}
+	reqSign := pb.ClientSignMessage{}
 	err := proto.Unmarshal(req.Content, &reqSign)
 
 	if err != nil {
@@ -170,7 +171,7 @@ func (p *permissionedProtocol) processMessageSignRequest(req *pb.ProtocolMessage
 func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
 	logger.Infof("Broadcasting %v", string(data))
 
-	req := pb.ClientMessage{}
+	req := pb.ClientSignMessage{}
 	err := proto.Unmarshal(data, &req)
 
 	if err != nil {
@@ -227,7 +228,7 @@ func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
 	request.AddSig(sigShare)
 }
 
-func (p *permissionedProtocol) signWithShare(req *pb.ClientMessage, scheme string, n,t int) ([]byte, error) {
+func (p *permissionedProtocol) signWithShare(req *pb.ClientSignMessage, scheme string, n,t int) ([]byte, error) {
 	keyName := fmt.Sprintf("%v_%v_%v", scheme, n, t)
 
 	privShare, err := p.keychain.LoadPrivateKey(keyName)
@@ -261,7 +262,7 @@ func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
 
 	context,closer := p.crypto.GetSignerVerifierAggregator(req.scheme)
 	defer closer.Close()
-	//b, err := context.Sign(req.Content, privShare)
+	//b, Err := context.Sign(req.Content, privShare)
 
 	fullSig, err := context.Aggregate(req.shares,req.digest,pubKey,req.t,req.n)
 

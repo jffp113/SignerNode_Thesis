@@ -19,7 +19,7 @@ services:
 # -------------=== bootstrap node ===-------------
 
   bootstrap:
-    image: signernode
+    image: ghcr.io/jffp113/signernode
     container_name: bootstrap
     expose:
       - 55000
@@ -27,7 +27,7 @@ services:
 
 # -------------=== signer node ===-------------
   signernode-1:
-    image: signernode
+    image: ghcr.io/jffp113/signernode
     container_name: signernode-1
     expose:
       - 8080
@@ -38,7 +38,7 @@ services:
     depends_on:
       - bootstrap
   signernode-2:
-    image: signernode
+    image: ghcr.io/jffp113/signernode
     container_name: signernode-2
     expose:
       - 8080
@@ -47,7 +47,7 @@ services:
     depends_on:
       - bootstrap
   signernode-3:
-    image: signernode
+    image: ghcr.io/jffp113/signernode
     container_name: signernode-3
     expose:
       - 8080
@@ -56,7 +56,7 @@ services:
     depends_on:
       - bootstrap
   signernode-4:
-    image: signernode
+    image: ghcr.io/jffp113/signernode
     container_name: signernode-4
     expose:
       - 8080
@@ -65,7 +65,7 @@ services:
     depends_on:
       - bootstrap
   signernode-5:
-    image: signernode
+    image: ghcr.io/jffp113/signernode
     container_name: signernode-5
     expose:
       - 8080
@@ -77,31 +77,31 @@ services:
 
 # -------------=== crypto ===-------------
   crypto-1:
-    image: crypto
+    image: ghcr.io/jffp113/crypto
     container_name: crypto-1
     command: bash -c "sleep 3; ./main -u tcp://signernode-1:9000"
     depends_on:
       - signernode-1
   crypto-2:
-    image: crypto
+    image: ghcr.io/jffp113/crypto
     container_name: crypto-2
     command:  bash -c "sleep 3; ./main -u tcp://signernode-2:9000"
     depends_on:
       - signernode-2
   crypto-3:
-    image: crypto
+    image: ghcr.io/jffp113/crypto
     container_name: crypto-3
     command:  bash -c "sleep 3; ./main -u tcp://signernode-3:9000"
     depends_on:
       - signernode-3
   crypto-4:
-    image: crypto
+    image: ghcr.io/jffp113/crypto
     container_name: crypto-4
     command:  bash -c "sleep 3; ./main -u tcp://signernode-4:9000"
     depends_on:
       - signernode-4
   crypto-5:
-    image: crypto
+    image: ghcr.io/jffp113/crypto
     container_name: crypto-5
     command:  bash -c "sleep 3; ./main -u tcp://signernode-5:9000"
     depends_on:
@@ -110,31 +110,31 @@ services:
 # -------------=== smartcontract ===-------------
 
   smartcontract-1:
-    image: sawtooth-smartcontract
+    image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-1
     command: intkey-tp-go -vv -C tcp://signernode-1:4004
     depends_on:
       - signernode-1
   smartcontract-2:
-    image: sawtooth-smartcontract
+    image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-2
     command: intkey-tp-go -vv -C tcp://signernode-2:4004
     depends_on:
       - signernode-2
   smartcontract-3:
-    image: sawtooth-smartcontract
+    image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-3
     command: intkey-tp-go -vv -C tcp://signernode-3:4004
     depends_on:
       - signernode-3
   smartcontract-4:
-    image: sawtooth-smartcontract
+    image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-4
     command: intkey-tp-go -vv -C tcp://signernode-4:4004
     depends_on:
       - signernode-4
   smartcontract-5:
-    image: sawtooth-smartcontract
+    image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-5
     command: intkey-tp-go -vv -C tcp://signernode-5:4004
     depends_on:

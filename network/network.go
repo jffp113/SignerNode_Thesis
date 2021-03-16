@@ -34,16 +34,18 @@ type network struct {
 	topic *pubsub.Topic
 	sub   *pubsub.Subscription
 	self  peer.ID
+	host  host.Host
+	disc  *peerDiscovery
 }
 
 type Network interface {
 	Broadcast(msg []byte) error
 	Send(node string, msg []byte)
 	Receive() []byte
+	GetMembership() []peer.AddrInfo
 }
 
 func (n *network) Broadcast(msg []byte) error {
-
 	m := networkMessage{
 		From:    n.self,
 		Content: msg,
@@ -65,6 +67,10 @@ func (n *network) Send(node string, msg []byte) {
 func (n *network) Receive() []byte {
 	//TODO add context
 	return <-n.messages
+}
+
+func (n *network) GetMembership() []peer.AddrInfo{
+	return n.disc.GetPeers()
 }
 
 func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
@@ -109,6 +115,8 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 		topic:    topic,
 		sub:      sub,
 		self:     h.ID(),
+		host: h,
+		disc: discovery,
 	}
 
 	go processIncomingMsg(network)
@@ -153,13 +161,12 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 	logger.Debug("Creating Peer Host")
 
 	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v", config.Port)
-
 	return libp2p.New(
 		context.Background(),
 		libp2p.ListenAddrStrings(listenAddr),
 		libp2p.ConnectionManager(connmgr.NewConnManager(
-			1,           // Lowwater
-			3,           // HighWater,
+			3,           // Lowwater
+			10,           // HighWater,
 			time.Minute, // GracePeriod
 		)),
 		libp2p.Identity(config.Priv),
