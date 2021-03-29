@@ -1,5 +1,6 @@
 package signermanager
 
+/*
 import (
 	"SignerNode/signermanager/pb"
 	"SignerNode/smartcontractengine"
@@ -341,3 +342,4 @@ func createProtocolMessage(msg []byte, messageType pb.ProtocolMessage_Type) ([]b
 
 	return b, err
 }
+*/

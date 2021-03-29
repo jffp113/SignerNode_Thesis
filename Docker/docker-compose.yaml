@@ -43,7 +43,7 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./signernode -t Byzantine -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-3:
@@ -52,7 +52,7 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./signernode -t Byzantine -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-4:
@@ -112,30 +112,35 @@ services:
   smartcontract-1:
     image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-1
-    command: intkey-tp-go -vv -C tcp://signernode-1:4004
+    command: intkey-tp-go -vv -C tcp://signernode-1:4004 -s TBLS256Optimistic
     depends_on:
       - signernode-1
   smartcontract-2:
     image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-2
-    command: intkey-tp-go -vv -C tcp://signernode-2:4004
+    command: intkey-tp-go -vv -C tcp://signernode-2:4004 -s TBLS256Optimistic
     depends_on:
       - signernode-2
   smartcontract-3:
     image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-3
-    command: intkey-tp-go -vv -C tcp://signernode-3:4004
+    command: intkey-tp-go -vv -C tcp://signernode-3:4004 -s TBLS256Optimistic
     depends_on:
       - signernode-3
   smartcontract-4:
     image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-4
-    command: intkey-tp-go -vv -C tcp://signernode-4:4004
+    command: intkey-tp-go -vv -C tcp://signernode-4:4004 -s TBLS256Optimistic
     depends_on:
       - signernode-4
   smartcontract-5:
     image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-5
-    command: intkey-tp-go -vv -C tcp://signernode-5:4004
+    command: intkey-tp-go -vv -C tcp://signernode-5:4004 -s TBLS256Optimistic
     depends_on:
       - signernode-5
+
+networks:
+  default:
+    external:
+      name: networkThesis

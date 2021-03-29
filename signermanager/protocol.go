@@ -8,6 +8,7 @@ import (
 )
 
 const PERMISSIONED = "Permissioned"
+const BYZANTINE = "Byzantine"
 
 type Protocol interface {
 	ProcessMessage(data []byte, ctx processContext)
@@ -19,6 +20,8 @@ func GetProtocol(protocolName string, factory crypto.ContextFactory,
 	switch protocolName {
 	case PERMISSIONED:
 		return NewPermissionedProtocol(factory, keychain,scFactory), nil
+	case BYZANTINE:
+		return NewByzantineProtocol(),nil
 	default:
 		return nil, errors.New("protocol does not exist")
 	}

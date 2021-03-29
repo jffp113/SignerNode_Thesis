@@ -61,7 +61,6 @@ func verifySig(sig []byte,digest []byte,scheme string){
 
 	keyBytes,_ := pubKey.MarshalBinary()
 
-	sig[3] = 1
 	req := pb.ClientVerifyMessage{
 		Scheme:   scheme,
 		PublicKey: keyBytes,
