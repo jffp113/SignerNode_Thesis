@@ -23,6 +23,8 @@ services:
     container_name: bootstrap
     expose:
       - 55000
+    ports:
+      - "55000:55000"
     command: ./main_bootstrap
 
 # -------------=== signer node ===-------------
@@ -34,7 +36,8 @@ services:
       - 9000
     ports:
       - "8080:8080"
-    command: ./signernode -k ./resources/keys/1/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+      - "46431:46431"
+    command: ./signernode --peerport=46431 -k ./resources/keys/1/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-2:
@@ -43,7 +46,9 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -t Byzantine -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    ports:
+      - "46432:46432"
+    command: ./signernode --peerport=46432 -t Byzantine -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-3:
@@ -52,7 +57,9 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -t Byzantine -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    ports:
+      - "46433:46433"
+    command: ./signernode --peerport=46433 -t Byzantine -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-4:
@@ -61,7 +68,9 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    ports:
+      - "46434:46434"
+    command: ./signernode --peerport=46434 -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-5:
@@ -70,7 +79,9 @@ services:
     expose:
       - 8080
       - 9000
-    command: ./signernode -k ./resources/keys/5/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    ports:
+      - "46435:46435"
+    command: ./signernode --peerport=46435 -k ./resources/keys/5/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
 

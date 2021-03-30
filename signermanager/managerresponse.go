@@ -77,7 +77,7 @@ func peerAddressesToStringSlice(addr []ma.Multiaddr) []string{
 
 func createInvalidMessageVerifyResponse(ch chan ManagerResponse) {
 	logger.Debug("Creating invalid verify response")
-	msg := pb.VerifyResponse{Status: pb.VerifyResponse_INVALID}
+	msg := pb.ClientVerifyResponse{Status: pb.ClientVerifyResponse_INVALID}
 	b,_:=proto.Marshal(&msg)
 	ch<-ManagerResponse{Ok,
 		b,
@@ -85,7 +85,7 @@ func createInvalidMessageVerifyResponse(ch chan ManagerResponse) {
 }
 func createValidMessageVerifyMessages(ch chan ManagerResponse) {
 	logger.Debug("Creating valid verify response")
-	msg := pb.VerifyResponse{Status: pb.VerifyResponse_OK}
+	msg := pb.ClientVerifyResponse{Status: pb.ClientVerifyResponse_OK}
 	b,_:=proto.Marshal(&msg)
 	ch<-ManagerResponse{Ok,
 		b,

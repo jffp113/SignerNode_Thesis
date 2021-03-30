@@ -10,13 +10,14 @@ import (
 )
 
 type Opts struct {
-	Verbose 	  []bool `short:"v" long:"verbose" description:"Increase verbosity"`
+	Verbose       []bool `short:"v" long:"verbose" description:"Increase verbosity"`
 	ApiPort       int    `short:"p" long:"port" description:"API Port" default:"8080"`
 	SignerURI     string `short:"s" long:"signer" description:"Signer URI" default:"tcp://eth0:9000"`
-	ScURI     	  string `short:"c" long:"smartcontract" description:"SmartContract URI" default:"tcp://eth0:4004"`
+	ScURI         string `short:"c" long:"smartcontract" description:"SmartContract URI" default:"tcp://eth0:4004"`
 	BootstrapNode string `short:"b" long:"bootstrap" description:"Boostrap Node to find other signer nodes"`
 	KeyPath       string `short:"k" long:"keys" description:"Path for the private key and public key" default:"./resources/"`
 	Protocol      string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
+	PeerPort      int	`long:"peerport" description:"P2P peer port" default:"0"`
 }
 
 
@@ -59,6 +60,7 @@ func main() {
 			signermanager.SetProtocol(opts.Protocol),
 			signermanager.SetSignerURI(opts.SignerURI),
 			signermanager.SetScURI(opts.ScURI),
+			signermanager.SetPeerPort(opts.PeerPort),
 		)
 
 	//Initiate signermanager

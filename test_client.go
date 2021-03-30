@@ -1,55 +1,32 @@
 package main
 
 import (
-	"SignerNode/signermanager/pb"
-	"bytes"
+	"SignerNode/client"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
 	"io/ioutil"
 	"net/http"
-	uuid "github.com/satori/go.uuid"
 	"time"
 )
 
 func sign(){
 
-	uuid := fmt.Sprint(uuid.NewV4())
-	msg:=pb.ClientSignMessage{
-		UUID:          fmt.Sprint(uuid),
-		Content:       []byte("Hello"),
-		SmartContractAddress: "intkey",
-	}
+	c, _ := client.NewClient(client.SetProtocol("Permissioned"),
+							client.SetSignerNodeAddresses("localhost:8080"))
 
-	b,err := proto.Marshal(&msg)
 
-	reader := bytes.NewReader(b)
 
-	fmt.Println(uuid)
 	start := time.Now()
-	resp, err := http.Post("http://localhost:8080/sign","application/protobuf",reader)
+	resp, err := c.SendSignRequest([]byte("Hello"),"intkey")
+
+	fmt.Println(resp)
 	t := time.Now()
 	elapsed := t.Sub(start)
 
 	fmt.Printf("Elapsed: %v\n",elapsed)
 
-	if err != nil {
-		fmt.Println(err)
-	}
+	//Verify sig
 
-	fmt.Println(resp)
-	body,_ :=ioutil.ReadAll(resp.Body)
-
-	respMsg := pb.ClientSignResponse{}
-
-	proto.Unmarshal(body,&respMsg)
-
-	fmt.Println(respMsg)
-
-	verifySig(respMsg.Signature,[]byte("Hello"),respMsg.Scheme)
-}
-
-func verifySig(sig []byte,digest []byte,scheme string){
 	kc := keychain.NewKeyChain("./resources/keys/1/")
 
 	pubKey,err := kc.LoadPublicKey("TBLS256_5_3")
@@ -59,25 +36,13 @@ func verifySig(sig []byte,digest []byte,scheme string){
 		return
 	}
 
-	keyBytes,_ := pubKey.MarshalBinary()
+	err = c.VerifySignature([]byte("Hello"),resp.Signature,resp.Scheme,pubKey)
 
-	req := pb.ClientVerifyMessage{
-		Scheme:   scheme,
-		PublicKey: keyBytes,
-		Digest:    digest,
-		Signature: sig,
+	if err != nil {
+		fmt.Println("Invalid signature ", err)
 	}
-
-	reqBytes,_ := proto.Marshal(&req)
-
-	resp,err := http.Post("http://localhost:8080/verify",
-		"application/protobuf",
-		bytes.NewReader(reqBytes))
-
-	body,_ :=ioutil.ReadAll(resp.Body)
-
-	fmt.Println(body)
 }
+
 
 func membership(){
 	resp,_ := http.Get("http://localhost:8080/membership")

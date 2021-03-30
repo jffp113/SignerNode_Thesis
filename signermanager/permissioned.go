@@ -126,8 +126,6 @@ func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessag
 		firstExec := true
 		//Todo add context with timer
 		for {
-			logger.Debugf("Aggregating request %v", v)
-
 			if !firstExec {
 				select {
 				case newSig := <-v.sharesChan:
@@ -137,6 +135,7 @@ func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessag
 					continue
 				}
 			}
+			logger.Debugf("Aggregating request %v", v)
 
 			firstExec = false
 			fullSig, err := p.aggregateShares(v)

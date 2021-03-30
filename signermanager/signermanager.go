@@ -45,7 +45,8 @@ type signermanager struct {
 
 	//Context to execute smartcontracts
 	scFactory smartcontractengine.SCContextFactory
-	scURI string
+	scURI     string
+	peerPort  int
 }
 
 func NewSignerManager(confs ...Config) *signermanager {
@@ -66,6 +67,7 @@ func NewSignerManager(confs ...Config) *signermanager {
 func (s *signermanager) Init() error {
 	net, err := network.CreateNetwork(s.context, network.NetConfig{
 		BootstrapPeers: []string{s.bootstrapNode},
+		Port: s.peerPort,
 	})
 	if err != nil {
 		return err

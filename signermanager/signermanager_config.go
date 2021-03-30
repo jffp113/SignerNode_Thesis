@@ -37,3 +37,10 @@ func SetScURI(uri string) Config{
 		return nil
 	}
 }
+
+func SetPeerPort(port int) Config{
+	return func(m *signermanager) error {
+		m.peerPort = port
+		return nil
+	}
+}
