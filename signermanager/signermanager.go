@@ -1,9 +1,9 @@
 package signermanager
 
 import (
-	"SignerNode/network"
-	"SignerNode/signermanager/pb"
-	"SignerNode/smartcontractengine"
+	"github.com/jffp113/SignerNode_Thesis/network"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-log"
 	"github.com/jffp113/CryptoProviderSDK/client"

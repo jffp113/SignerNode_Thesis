@@ -1,7 +1,7 @@
 package api
 
 import (
-	"SignerNode/signermanager"
+	"github.com/jffp113/SignerNode_Thesis/signermanager"
 	"fmt"
 	"github.com/ipfs/go-log"
 	"io/ioutil"

@@ -1,8 +1,8 @@
 package signermanager
 
 import (
-	"SignerNode/network"
-	"SignerNode/smartcontractengine"
+	"github.com/jffp113/SignerNode_Thesis/network"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"errors"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"

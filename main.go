@@ -1,7 +1,7 @@
 package main
 
 import (
-	"SignerNode/network"
+	"github.com/jffp113/SignerNode_Thesis/network"
 	"context"
 	"fmt"
 	"github.com/ipfs/go-log"

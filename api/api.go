@@ -1,6 +1,6 @@
 package api
 
-import "SignerNode/signermanager"
+import "github.com/jffp113/SignerNode_Thesis/signermanager"
 
 type GenericRespChan func() <-chan signermanager.ManagerResponse
 type SignFunc func(data []byte) <-chan signermanager.ManagerResponse

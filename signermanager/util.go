@@ -1,7 +1,7 @@
 package signermanager
 
 import (
-	"SignerNode/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"

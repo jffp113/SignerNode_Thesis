@@ -1,8 +1,8 @@
 package smartcontractengine
 
 import (
-	"SignerNode/messaging"
-	"SignerNode/smartcontractengine/pb"
+	"github.com/jffp113/SignerNode_Thesis/messaging"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-log"
 	zmq "github.com/pebbe/zmq4"

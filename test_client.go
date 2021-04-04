@@ -1,7 +1,7 @@
 package main
 
 import (
-	"SignerNode/client"
+	"github.com/jffp113/SignerNode_Thesis/client"
 	"fmt"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
 	"io/ioutil"

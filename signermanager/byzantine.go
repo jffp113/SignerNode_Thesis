@@ -1,7 +1,7 @@
 package signermanager
 
 import (
-	"SignerNode/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"github.com/golang/protobuf/proto"
 )
 

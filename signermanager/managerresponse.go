@@ -1,7 +1,7 @@
 package signermanager
 
 import (
-	"SignerNode/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"

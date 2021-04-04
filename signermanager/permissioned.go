@@ -1,8 +1,8 @@
 package signermanager
 
 import (
-	"SignerNode/signermanager/pb"
-	"SignerNode/smartcontractengine"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"

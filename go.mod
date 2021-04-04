@@ -1,4 +1,4 @@
-module SignerNode
+module github.com/jffp113/SignerNode_Thesis
 
 go 1.15
 

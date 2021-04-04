@@ -1,8 +1,8 @@
 package main
 
 import (
-	"SignerNode/api"
-	"SignerNode/signermanager"
+	"github.com/jffp113/SignerNode_Thesis/api"
+	"github.com/jffp113/SignerNode_Thesis/signermanager"
 	"fmt"
 	"github.com/ipfs/go-log"
 	"github.com/jessevdk/go-flags"

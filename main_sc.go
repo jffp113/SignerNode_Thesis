@@ -1,7 +1,7 @@
 package main
 
 import (
-	"SignerNode/smartcontractengine"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"fmt"
 	"github.com/ipfs/go-log"
 	"time"

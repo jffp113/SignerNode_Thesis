@@ -4,7 +4,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"google.golang.org/protobuf/proto"
 )
-import "SignerNode/network/pb"
+import "github.com/jffp113/SignerNode_Thesis/network/pb"
 
 type networkMessage struct {
 	To      peer.ID
