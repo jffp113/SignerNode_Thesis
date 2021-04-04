@@ -25,7 +25,9 @@ services:
       - 55000
     ports:
       - "55000:55000"
-    command: ./main_bootstrap
+    environment:
+      - IS_BOOTSTRAP=true
+    command: ./main
 
 # -------------=== signer node ===-------------
   signernode-1:
@@ -37,7 +39,7 @@ services:
     ports:
       - "8080:8080"
       - "46431:46431"
-    command: ./signernode --peerport=46431 -t Permissionless -k ./resources/keys/1/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46431 -t Permissionless -k ./resources/keys/1/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-2:
@@ -48,7 +50,7 @@ services:
       - 9000
     ports:
       - "46432:46432"
-    command: ./signernode --peerport=46432 -t Permissionless -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46432 -t Permissionless -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-3:
@@ -59,7 +61,7 @@ services:
       - 9000
     ports:
       - "46433:46433"
-    command: ./signernode --peerport=46433 -t Permissionless -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46433 -t Permissionless -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-4:
@@ -70,7 +72,7 @@ services:
       - 9000
     ports:
       - "46434:46434"
-    command: ./signernode --peerport=46434 -t Permissionless -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46434 -t Permissionless -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-5:
@@ -81,7 +83,7 @@ services:
       - 9000
     ports:
       - "46435:46435"
-    command: ./signernode --peerport=46435 -t Permissionless -k ./resources/keys/5/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46435 -t Permissionless -k ./resources/keys/5/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
 

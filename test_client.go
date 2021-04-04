@@ -38,6 +38,7 @@ func sign() {
 		fmt.Print(err)
 		return
 	}
+	fmt.Println("ok")
 
 	err = c.VerifySignature([]byte("Hello"), resp.Signature, resp.Scheme, pubKey)
 
@@ -54,6 +55,6 @@ func membership() {
 	fmt.Println(string(body))
 }
 
-func main() {
-	sign()
-}
+//func main() {
+//	sign()
+//}

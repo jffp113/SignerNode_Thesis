@@ -26,7 +26,8 @@ RUN go mod download
 
 COPY . .
 
-RUN go build signernode.go
-RUN go build main_bootstrap.go
+#RUN go build signernode.go
+#RUN go build main_bootstrap.go
+RUN go build main.go
 
-CMD ["./signernode"]
+CMD ["./main"]

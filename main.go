@@ -1,39 +1,104 @@
 package main
 
 import (
-	"github.com/jffp113/SignerNode_Thesis/network"
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/ipfs/go-log"
-	"sync"
-	"time"
+	"github.com/jessevdk/go-flags"
+	"github.com/jffp113/SignerNode_Thesis/api"
+	"github.com/jffp113/SignerNode_Thesis/network"
+	"github.com/jffp113/SignerNode_Thesis/signermanager"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"os"
+	"strconv"
 )
 
-func main() {
-	//log.SetAllLoggers(log.LogLevel(logging.DEBUG))
+func main()  {
+	isBootstrap,_ := strconv.ParseBool(os.Getenv("IS_BOOTSTRAP"))
+
+	if isBootstrap {
+		mainBootstrap()
+	} else {
+		mainSignerNode()
+	}
+}
+func mainBootstrap() {
 	_ = log.SetLogLevel("network", "debug")
-	_ = log.SetLogLevel("pubsub", "debug")
-	_ = log.SetLogLevel("connmgr", "debug")
-	_ = log.SetLogLevel("dht", "warn")
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	b := []byte("123456789012345678901234567890123")
+	reader := bytes.NewReader(b)
 
-	n, _ := network.CreateNetwork(context.Background(), network.NetConfig{
+	priv, _, _ := crypto.GenerateKeyPairWithReader(crypto.Ed25519, -1, reader)
+
+	network.NewBootstrapNode(context.Background(), network.NetConfig{
 		RendezvousString: "",
-		BootstrapPeers:   []string{"/ip4/127.0.0.1/tcp/55840/p2p/QmRmunGukdsZ1wXtN5av5KWVh4LK8xzHTK6V9HS9BJNhkK"},
-		Port:             55349,
+		//BootstrapPeers:   []string{"/ip4/127.0.0.1/tcp/52539/p2p/QmeTtPHwtjkmYUtjckbwXaMr4SDnyDZzcyWT1n32DE3A1n"},
+		Port: 55000,
+		Priv: priv,
 	})
+	select {}
+}
 
-	go func() {
-		for {
-			fmt.Println("Waiting")
-			fmt.Println(string(n.Receive()))
+
+type Opts struct {
+	Verbose       []bool `short:"v" long:"verbose" description:"Increase verbosity"`
+	ApiPort       int    `short:"p" long:"port" description:"API Port" default:"8080"`
+	SignerURI     string `short:"s" long:"signer" description:"Signer URI" default:"tcp://eth0:9000"`
+	ScURI         string `short:"c" long:"smartcontract" description:"SmartContract URI" default:"tcp://eth0:4004"`
+	BootstrapNode string `short:"b" long:"bootstrap" description:"Boostrap Node to find other signer nodes"`
+	KeyPath       string `short:"k" long:"keys" description:"Path for the private key and public key" default:"./resources/"`
+	Protocol      string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
+	PeerPort      int    `long:"peerport" description:"P2P peer port" default:"0"`
+}
+
+func mainSignerNode() {
+	var opts Opts
+
+	parser := flags.NewParser(&opts, flags.Default)
+	remaining, err := parser.Parse()
+	if err != nil {
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			os.Exit(0)
+		} else {
+			fmt.Printf("Failed to parse args: %v\n", err)
+			os.Exit(2)
 		}
-	}()
-	for {
-		time.Sleep(10 * time.Second)
-		fmt.Println(n.Broadcast([]byte("1")))
 	}
 
+	if len(remaining) > 0 {
+		fmt.Printf("Error: Unrecognized arguments passed: %v\n", remaining)
+		os.Exit(2)
+	}
+
+	//Set log level
+
+	switch len(opts.Verbose) {
+	case 2:
+		log.SetAllLoggers(log.LevelDebug)
+	case 1:
+		log.SetAllLoggers(log.LevelInfo)
+	default:
+		log.SetAllLoggers(log.LevelWarn)
+	}
+	_ = log.SetLogLevel("dht", "warn")
+
+	sm := signermanager.NewSignerManager(
+		signermanager.SetBootStrapNode(opts.BootstrapNode),
+		signermanager.SetKeyPath(opts.KeyPath),
+		signermanager.SetProtocol(opts.Protocol),
+		signermanager.SetSignerURI(opts.SignerURI),
+		signermanager.SetScURI(opts.ScURI),
+		signermanager.SetPeerPort(opts.PeerPort),
+	)
+
+	//Initiate signermanager
+	err = sm.Init()
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	api.Init(opts.ApiPort, sm.Sign, sm.Verify,sm.InstallShares, api.ConvertToGeneric(sm.GetMembership))
 }
