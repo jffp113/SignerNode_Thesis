@@ -8,7 +8,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
-	"go.uber.org/atomic"
 	"sync"
 )
 
@@ -18,6 +17,12 @@ type permissionedProtocol struct {
 	crypto      crypto.ContextFactory
 	keychain    keychain.KeyChain
 	sc          smartcontractengine.SCContextFactory
+}
+
+func (p *permissionedProtocol) InstallShares(data []byte) error {
+	return errors.New("Operation not supported")
+	//TODO change the protocols to a event base where it is necessary to register every
+	//TODO operation (message) supported. This will improve code readability
 }
 
 func (p *permissionedProtocol) addRequest(req *request, uuid string) {
@@ -31,43 +36,6 @@ func (p *permissionedProtocol) deleteRequest(uuid string) {
 	defer p.requestLock.Unlock()
 	logger.Debugf("Removing request with uuid %v", uuid)
 	delete(p.requests, uuid)
-}
-
-type request struct {
-	//Lock necessary to control insertion
-	//in the signature shares slice
-	lock sync.Mutex
-	//Chan to respond to the client
-	responseChan chan<- ManagerResponse
-	//Signature shares from every signernode
-	shares             [][]byte
-	sharesChan         chan []byte
-	aggregatingInProgress atomic.Bool
-	insertInSharesChan bool
-	t, n               int
-	scheme             string
-	uuid               string
-	digest             []byte
-}
-
-//Will return true when has enough shares at the first time
-func (r *request) AddSigAndCheckIfHaveEnoughShares(sig []byte) bool {
-	//Lock request so no one changes the shares
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	//Check if shares slice was used
-	if r.insertInSharesChan {
-		//If used insert in the chan so that the goroutine
-		//who is aggregating can get the new shares
-		r.sharesChan <- sig
-		return true //Only return true at the first time
-	}
-
-	//Add the share in the slice
-	r.shares = append(r.shares, sig)
-	r.insertInSharesChan = len(r.shares) >= r.t
-	return r.insertInSharesChan
 }
 
 func (r *permissionedProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid string) (*request, bool) {
@@ -86,7 +54,7 @@ func (r *permissionedProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid str
 
 	enoughShares := v.AddSigAndCheckIfHaveEnoughShares(sig)
 
-	if enoughShares{
+	if enoughShares {
 		aggregatingInProgress := v.aggregatingInProgress.Swap(true)
 		return v, !aggregatingInProgress
 	}
@@ -276,16 +244,7 @@ func (p *permissionedProtocol) signWithShare(req *pb.ClientSignMessage, scheme s
 		return nil, err
 	}
 
-	context, closer := p.crypto.GetSignerVerifierAggregator(scheme)
-	defer closer.Close()
-	b, err := context.Sign(req.Content, privShare)
-
-	if err != nil {
-		logger.Error(err)
-		return nil, err
-	}
-
-	return b, nil
+	return signWithShare(req.Content, privShare, p.crypto, scheme, n, t)
 }
 
 func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
@@ -298,18 +257,7 @@ func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
 		return nil, err
 	}
 
-	context, closer := p.crypto.GetSignerVerifierAggregator(req.scheme)
-	defer closer.Close()
-	//b, Err := context.Sign(req.Content, privShare)
-
-	fullSig, err := context.Aggregate(req.shares, req.digest, pubKey, req.t, req.n)
-
-	if err != nil {
-		logger.Error(err)
-		return nil, err
-	}
-
-	return fullSig, nil
+	return aggregateShares(req, pubKey, p.crypto)
 }
 
 func NewPermissionedProtocol(crypto crypto.ContextFactory, keychain keychain.KeyChain,
@@ -323,20 +271,4 @@ func NewPermissionedProtocol(crypto crypto.ContextFactory, keychain keychain.Key
 	}
 
 	return &p
-}
-
-func createProtocolMessage(msg []byte, messageType pb.ProtocolMessage_Type) ([]byte, error) {
-	req := pb.ProtocolMessage{
-		Type:    messageType,
-		Content: msg,
-	}
-
-	b, err := proto.Marshal(&req)
-
-	if err != nil {
-		logger.Error(err)
-		return nil, err
-	}
-
-	return b, err
 }

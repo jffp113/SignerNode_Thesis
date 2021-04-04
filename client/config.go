@@ -1,7 +1,7 @@
 package client
 
 const (
-	PermissionedProtocol = "Permissioned"
+	PermissionedProtocol   = "Permissioned"
 	PermissionlessProtocol = "Permissionless"
 )
 

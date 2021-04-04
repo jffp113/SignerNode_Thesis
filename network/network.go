@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
@@ -10,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"sync"
 	"time"
 )
 
@@ -21,7 +23,7 @@ type NetConfig struct {
 	RendezvousString string
 	BootstrapPeers   []string
 	Port             int
-	Priv 		crypto.PrivKey
+	Priv             crypto.PrivKey
 	//ListenAddresses  addrList
 	//ProtocolID       string
 }
@@ -29,25 +31,57 @@ type NetConfig struct {
 type network struct {
 	messages chan []byte
 
-	ctx   context.Context
-	ps    *pubsub.PubSub
-	topic *pubsub.Topic
-	sub   *pubsub.Subscription
-	self  peer.ID
-	host  host.Host
-	disc  *peerDiscovery
+	ctx context.Context
+	ps  *pubsub.PubSub
+
+	mainGroup Group
+
+	self peer.ID
+	host host.Host
+	disc *peerDiscovery
+
+	groupsLock sync.Mutex
+	groups     map[string]Group
+}
+
+type Group struct {
+	topic    *pubsub.Topic
+	sub      *pubsub.Subscription
+	messages chan<- []byte
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 type Network interface {
 	Broadcast(msg []byte) error
-	Send(node string, msg []byte)
+	BroadcastToGroup(groupId string ,msg []byte) error
+	//Send(node string, msg []byte)
+	JoinGroup(groupId string) error
+	LeaveGroup(groupId string) error
 	Receive() []byte
 	GetMembership() []peer.AddrInfo
 }
 
 func (n *network) Broadcast(msg []byte) error {
+	return n.mainGroup.Broadcast(msg,n.self)
+}
+
+func (n *network) BroadcastToGroup(groupId string ,msg []byte) error {
+	n.groupsLock.Lock()
+	defer n.groupsLock.Unlock()
+
+	g,ok := n.groups[groupId]
+
+	if !ok {
+		return errors.New("group does not exist")
+	}
+
+	return g.Broadcast(msg,n.self)
+}
+
+func (g Group) Broadcast(msg []byte,self peer.ID) error {
 	m := networkMessage{
-		From:    n.self,
+		From:    self,
 		Content: msg,
 	}
 
@@ -57,11 +91,55 @@ func (n *network) Broadcast(msg []byte) error {
 		return err
 	}
 
-	return n.topic.Publish(n.ctx, msgBytes)
+	return g.topic.Publish(g.ctx, msgBytes)
 }
 
-func (n *network) Send(node string, msg []byte) {
-	//todo
+func (n *network) JoinGroup(groupId string) error {
+	logger.Debug("Joining group %v", groupId)
+	n.groupsLock.Lock()
+	defer n.groupsLock.Unlock()
+	topic, err := n.ps.Join(groupId)
+
+	if err != nil {
+		return err
+	}
+
+	sub, err := topic.Subscribe()
+
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(n.ctx)
+
+	g := Group{
+		topic:    topic,
+		sub:      sub,
+		messages: n.messages,
+		ctx:      ctx,
+		cancel: cancel,
+	}
+	n.groups[groupId] = g
+
+	go g.processIncomingMsg(n)
+
+	return nil
+}
+
+func (n *network) LeaveGroup(groupId string) error {
+	n.groupsLock.Lock()
+	defer n.groupsLock.Unlock()
+
+	g,ok := n.groups[groupId]
+	delete(n.groups,groupId)
+
+	if !ok {
+		return errors.New("group does not exist")
+	}
+
+	g.cancel()
+
+	return nil
 }
 
 func (n *network) Receive() []byte {
@@ -69,7 +147,7 @@ func (n *network) Receive() []byte {
 	return <-n.messages
 }
 
-func (n *network) GetMembership() []peer.AddrInfo{
+func (n *network) GetMembership() []peer.AddrInfo {
 	return n.disc.GetPeers()
 }
 
@@ -108,28 +186,40 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 		return nil, err
 	}
 
+	msgChan := make(chan []byte, NetworkBufSize)
+
 	network := &network{
-		messages: make(chan []byte, NetworkBufSize),
+		messages: msgChan,
 		ctx:      ctx,
 		ps:       ps,
-		topic:    topic,
-		sub:      sub,
-		self:     h.ID(),
+		mainGroup: Group{topic,
+			sub,
+			msgChan,
+			ctx,
+			nil},
+		self: h.ID(),
 		host: h,
 		disc: discovery,
 	}
 
-	go processIncomingMsg(network)
+	go network.mainGroup.processIncomingMsg(network)
 
 	//showConnectedListPeers(network)
 
 	return network, nil
 }
 
-func processIncomingMsg(n *network) {
+func (g Group) processIncomingMsg(n *network) {
 	for {
+
+		select {
+		case _ = <-g.ctx.Done():
+			return
+		default:
+		}
+
 		logger.Debug("Waiting for new message")
-		msg, err := n.sub.Next(n.ctx)
+		msg, err := g.sub.Next(g.ctx)
 		logger.Debugf("New message arrived from", msg.ReceivedFrom)
 
 		if err != nil {
@@ -166,7 +256,7 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 		libp2p.ListenAddrStrings(listenAddr),
 		libp2p.ConnectionManager(connmgr.NewConnManager(
 			3,           // Lowwater
-			10,           // HighWater,
+			10,          // HighWater,
 			time.Minute, // GracePeriod
 		)),
 		libp2p.Identity(config.Priv),

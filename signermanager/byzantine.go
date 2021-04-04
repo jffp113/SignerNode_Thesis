@@ -6,7 +6,11 @@ import (
 )
 
 type byzantineProtocol struct {
+}
 
+func (p *byzantineProtocol) InstallShares(data []byte) error {
+	//errors.New("operation not supported")
+	return nil
 }
 
 func (p *byzantineProtocol) ProcessMessage(data []byte, ctx processContext) {
@@ -28,7 +32,6 @@ func (p *byzantineProtocol) processMessageSignResponse(req *pb.ProtocolMessage, 
 	logger.Debug("Byzantine Do nothing")
 
 }
-
 
 func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, ctx processContext) {
 	logger.Debug("Received Sign(Byzantine) Request")
@@ -60,7 +63,6 @@ func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, c
 func (p *byzantineProtocol) Sign(data []byte, ctx signContext) {
 	//Do nothing
 }
-
 
 func NewByzantineProtocol() Protocol {
 

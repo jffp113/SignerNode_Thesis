@@ -44,12 +44,11 @@ func (c *context) InvokeSmartContract(payload []byte) ScResponse {
 
 	msg, _, _ := pb.CreateHandlerMessage(pb.Message_SMART_CONTRACT_VALIDATE_REQUEST, &req, handlerId)
 
-	reply,err := c.sendHandlerMessageAndReceiveResponse(msg)
+	reply, err := c.sendHandlerMessageAndReceiveResponse(msg)
 
 	if err != nil {
 		panic("error requesting smartcontract validation")
 	}
-
 
 	if reply.MessageType != pb.Message_SMART_CONTRACT_VALIDATE_RESPONSE {
 		panic("Wrong message received")
@@ -67,12 +66,12 @@ func (c *context) InvokeSmartContract(payload []byte) ScResponse {
 		T:      int(replyTHS.T),
 		N:      int(replyTHS.N),
 		Scheme: replyTHS.SignatureScheme,
-		Valid: replyTHS.Status == pb.SmartContractValidationResponse_OK,
-		Error: replyTHS.Status == pb.SmartContractValidationResponse_INTERNAL_ERROR,
+		Valid:  replyTHS.Status == pb.SmartContractValidationResponse_OK,
+		Error:  replyTHS.Status == pb.SmartContractValidationResponse_INTERNAL_ERROR,
 	}
 }
 
-func (c *scClient) GetContext(scAddress string) (SCContext,io.Closer) {
+func (c *scClient) GetContext(scAddress string) (SCContext, io.Closer) {
 	worker, err := messaging.NewConnection(c.context, zmq.DEALER, "inproc://workers", false)
 
 	if err != nil {
@@ -163,7 +162,6 @@ func (c *scClient) processNewHandlers() {
 		c.handlers[req.SmartContractAddress] = newMsg.HandlerId
 
 		rep := pb.SmartContractRegisterResponse{Status: pb.SmartContractRegisterResponse_OK}
-
 
 		handlerMsg, _, err := pb.CreateMessageWithCorrelationId(pb.Message_SMART_CONTRACT_REGISTER_RESPONSE,
 			&rep, newMsg.CorrelationId, newMsg.HandlerId)

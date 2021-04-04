@@ -18,7 +18,7 @@ func CreateMessage(msgType Message_MessageType, data []byte) ([]byte, string, er
 
 func CreateSignMessageWithCorrelationId(msgType Message_MessageType, data []byte, corrId string) ([]byte, string, error) {
 	b, err := proto.Marshal(&Message{
-		MessageType:          msgType,
+		MessageType:   msgType,
 		CorrelationId: corrId,
 		Content:       data,
 	})

@@ -14,7 +14,7 @@ func main() {
 	b := []byte("123456789012345678901234567890123")
 	reader := bytes.NewReader(b)
 
-	priv,_ ,_:=crypto.GenerateKeyPairWithReader(crypto.Ed25519, -1, reader)
+	priv, _, _ := crypto.GenerateKeyPairWithReader(crypto.Ed25519, -1, reader)
 
 	network.NewBootstrapNode(context.Background(), network.NetConfig{
 		RendezvousString: "",

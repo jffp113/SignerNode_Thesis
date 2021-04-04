@@ -51,12 +51,12 @@ type signermanager struct {
 
 func NewSignerManager(confs ...Config) *signermanager {
 	manager := &signermanager{
-		workPool:      make(chan []byte, MessageWorkerChanSize),
-		numWorkers:    DefaultNumberOfWorkers,
-		context:       ctx.Background(),
+		workPool:   make(chan []byte, MessageWorkerChanSize),
+		numWorkers: DefaultNumberOfWorkers,
+		context:    ctx.Background(),
 	}
 
-	for _,v := range confs {
+	for _, v := range confs {
 		_ = v(manager)
 	}
 
@@ -67,7 +67,7 @@ func NewSignerManager(confs ...Config) *signermanager {
 func (s *signermanager) Init() error {
 	net, err := network.CreateNetwork(s.context, network.NetConfig{
 		BootstrapPeers: []string{s.bootstrapNode},
-		Port: s.peerPort,
+		Port:           s.peerPort,
 	})
 	if err != nil {
 		return err
@@ -84,13 +84,13 @@ func (s *signermanager) Init() error {
 
 	s.keychain = keychain.NewKeyChain(s.keyPath)
 
-	s.scFactory,err = smartcontractengine.NewSmartContractClientFactory(s.scURI)
+	s.scFactory, err = smartcontractengine.NewSmartContractClientFactory(s.scURI)
 
 	if err != nil {
 		return err
 	}
 
-	p, err := GetProtocol(s.protocolName, s.cryptoFactory, s.keychain, s.scFactory)
+	p, err := GetProtocol(s.protocolName, s.cryptoFactory, s.keychain, s.scFactory,s.network)
 
 	if err != nil {
 		return err
@@ -107,18 +107,40 @@ func (s *signermanager) Init() error {
 type signContext struct {
 	returnChan chan<- ManagerResponse
 	broadcast  func(msg []byte) error
+	broadcastToGroup func(groupId string ,msg []byte) error
+	joinGroup func(groupId string) error
+	leaveGroup func(groupId string) error
 }
 
 type processContext struct {
 	broadcast func(msg []byte) error
+	broadcastToGroup func(groupId string ,msg []byte) error
+	joinGroup func(groupId string) error
+	leaveGroup func(groupId string) error
 }
 
 func (s *signermanager) Sign(data []byte) <-chan ManagerResponse {
 	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
 	go s.protocol.Sign(data, signContext{
-		returnChan: ch,
-		broadcast:  s.network.Broadcast,
+		returnChan:       ch,
+		broadcast:        s.network.Broadcast,
+		broadcastToGroup: s.network.BroadcastToGroup,
+		joinGroup:        s.network.JoinGroup,
+		leaveGroup:       s.network.LeaveGroup,
 	})
+
+	return ch
+}
+
+func (s *signermanager) InstallShares(data []byte) <-chan ManagerResponse {
+	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
+	go func() {
+		err := s.protocol.InstallShares(data)
+		if err != nil {
+			sendErrorMessage(ch,err)
+		}
+		sendOkMessage(ch,[]byte{})
+	}()
 
 	return ch
 }
@@ -128,15 +150,15 @@ func (s *signermanager) Verify(data []byte) <-chan ManagerResponse {
 
 	go func() {
 		msg := pb.ClientVerifyMessage{}
-		err := proto.Unmarshal(data,&msg)
+		err := proto.Unmarshal(data, &msg)
 
 		if err != nil {
-			ch<-ManagerResponse{Error,
-								nil,
-								err}
+			ch <- ManagerResponse{Error,
+				nil,
+				err}
 		}
 
-		context,c := s.cryptoFactory.GetSignerVerifierAggregator(msg.Scheme)
+		context, c := s.cryptoFactory.GetSignerVerifierAggregator(msg.Scheme)
 		defer c.Close()
 		pubKey := keychain.ConvertBytesToPubKey(msg.PublicKey)
 		err = context.Verify(msg.Signature, msg.Digest, pubKey)
@@ -152,18 +174,16 @@ func (s *signermanager) Verify(data []byte) <-chan ManagerResponse {
 	return ch
 }
 
-
 func (s *signermanager) GetMembership() <-chan ManagerResponse {
 	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
 	//TODO
 
 	go func() {
-		createValidMembershipResponse(s.network.GetMembership(),ch)
+		createValidMembershipResponse(s.network.GetMembership(), ch)
 	}()
 
 	return ch
 }
-
 
 func (s *signermanager) startWorkers() {
 	for i := 0; i < s.numWorkers; i++ {
@@ -173,7 +193,10 @@ func (s *signermanager) startWorkers() {
 				case data := <-s.workPool:
 					logger.Debug("Start Processing Worker")
 					s.protocol.ProcessMessage(data, processContext{
-						s.network.Broadcast,
+						broadcast:		  s.network.Broadcast,
+						broadcastToGroup: s.network.BroadcastToGroup,
+						joinGroup:        s.network.JoinGroup,
+						leaveGroup:       s.network.LeaveGroup,
 					})
 					logger.Debug("Finish Processing Worker")
 				case _ = <-s.context.Done():

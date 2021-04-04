@@ -14,9 +14,9 @@ import (
 )
 
 type peerDiscovery struct {
-	ctx    context.Context
-	host   host.Host
-	config NetConfig
+	ctx       context.Context
+	host      host.Host
+	config    NetConfig
 	discovery discovery.Discovery
 }
 
@@ -88,27 +88,26 @@ func (d *peerDiscovery) ConnectToBootstrapNodes() error {
 
 func (d *peerDiscovery) GetBootstrapPeers() []ma.Multiaddr {
 	bcap := len(d.config.BootstrapPeers)
-	result := make([]ma.Multiaddr,0,bcap)
+	result := make([]ma.Multiaddr, 0, bcap)
 
-	for _,v := range d.config.BootstrapPeers {
-		addr,_ := ma.NewMultiaddr(v)
+	for _, v := range d.config.BootstrapPeers {
+		addr, _ := ma.NewMultiaddr(v)
 		result = append(result, addr)
 	}
 
 	return result
 }
 
-func (d *peerDiscovery) GetPeers() []peer.AddrInfo{
+func (d *peerDiscovery) GetPeers() []peer.AddrInfo {
 	peerChan, err := d.discovery.FindPeers(context.Background(), "network")
 
 	var peers []peer.AddrInfo
 
-	logger.Debug("Discovering peers",err)
+	logger.Debug("Discovering peers", err)
 	for v := range peerChan {
 		logger.Debug(v)
 		peers = append(peers, v)
 	}
-
 
 	return peers
 }

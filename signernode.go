@@ -17,9 +17,8 @@ type Opts struct {
 	BootstrapNode string `short:"b" long:"bootstrap" description:"Boostrap Node to find other signer nodes"`
 	KeyPath       string `short:"k" long:"keys" description:"Path for the private key and public key" default:"./resources/"`
 	Protocol      string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
-	PeerPort      int	`long:"peerport" description:"P2P peer port" default:"0"`
+	PeerPort      int    `long:"peerport" description:"P2P peer port" default:"0"`
 }
-
 
 func main() {
 	var opts Opts
@@ -40,28 +39,26 @@ func main() {
 		os.Exit(2)
 	}
 
-	
-	//Set log level 
+	//Set log level
 
 	switch len(opts.Verbose) {
-		case 2:
-			log.SetAllLoggers(log.LevelDebug)
-		case 1:
-			log.SetAllLoggers(log.LevelInfo)
-		default:
-			log.SetAllLoggers(log.LevelWarn)
+	case 2:
+		log.SetAllLoggers(log.LevelDebug)
+	case 1:
+		log.SetAllLoggers(log.LevelInfo)
+	default:
+		log.SetAllLoggers(log.LevelWarn)
 	}
 	_ = log.SetLogLevel("dht", "warn")
 
-
 	sm := signermanager.NewSignerManager(
-			signermanager.SetBootStrapNode(opts.BootstrapNode),
-			signermanager.SetKeyPath(opts.KeyPath),
-			signermanager.SetProtocol(opts.Protocol),
-			signermanager.SetSignerURI(opts.SignerURI),
-			signermanager.SetScURI(opts.ScURI),
-			signermanager.SetPeerPort(opts.PeerPort),
-		)
+		signermanager.SetBootStrapNode(opts.BootstrapNode),
+		signermanager.SetKeyPath(opts.KeyPath),
+		signermanager.SetProtocol(opts.Protocol),
+		signermanager.SetSignerURI(opts.SignerURI),
+		signermanager.SetScURI(opts.ScURI),
+		signermanager.SetPeerPort(opts.PeerPort),
+	)
 
 	//Initiate signermanager
 	err = sm.Init()
@@ -71,5 +68,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	api.Init(opts.ApiPort, sm.Sign,sm.Verify,api.ConvertToGeneric(sm.GetMembership))
+	api.Init(opts.ApiPort, sm.Sign, sm.Verify,sm.InstallShares, api.ConvertToGeneric(sm.GetMembership))
 }

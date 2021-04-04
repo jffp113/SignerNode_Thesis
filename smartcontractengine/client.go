@@ -14,5 +14,5 @@ type SCContext interface {
 }
 
 type SCContextFactory interface {
-	GetContext(scAddress string) (SCContext,io.Closer)
+	GetContext(scAddress string) (SCContext, io.Closer)
 }

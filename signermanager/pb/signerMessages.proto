@@ -2,29 +2,48 @@ syntax = "proto3";
 
 package pb;
 
+
+//Represents a message exchanged between two signer nodes.
 message ProtocolMessage {
 
   enum Type {
     DEFAULT = 0;
+    //Request sent by a signer node that wants to initialize
+    // a group signature
     SIGN_REQUEST = 100;
+    //Response by a witness to a signer node that sent a
+    //SIGN_REQUEST
     SIGN_RESPONSE = 101;
   }
 
+  //Defines the type of the content envelop
   Type type = 1;
 
   string correlation_id = 2;
 
+  //The content carried in bytes
   bytes content = 4;
-
 }
 
+//A message redirected to the protocol that
+//includes a request to sign a certain content
+//is used in a permissioned protocol as well
+//in as in a permissionless protocol
 message ClientSignMessage{
+  //UUID created by a client to identify a sign request
   string UUID = 1;
+
+  //The smart contract address in which a
+  //request should be processed with.
   string SmartContractAddress = 2;
-  //uint32 t = 3;
-  //uint32 n = 4;
-  //string Scheme = 5;
+
+  //Content to be signed
   bytes content = 6;
+
+  //The key id that should be used to sign a request
+  //Used in a permissionless protocol and previously
+  //deployed by a client
+  string keyId = 7;
 }
 
 message ClientSignResponse{
@@ -71,4 +90,18 @@ message MembershipResponse{
   repeated peer peers = 2;
 }
 
+message ClientInstallShareRequest{
+  bytes public_key = 1;
+  bytes private_key = 2;
+  //	validUntil   time.Time
+  //	isOneTimeKey bool
 
+  // ValidUntil represents time that the key expire
+  // as a Unix time (the number of seconds elapsed
+  // since January 1, 1970 UTC).
+  int64 validUntil = 3;
+
+  //IsOneTimeKey if true represents that a key
+  //can only be used once.
+  bool isOneTimeKey = 4;
+}

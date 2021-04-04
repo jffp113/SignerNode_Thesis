@@ -17,6 +17,7 @@ require (
 	github.com/pebbe/zmq4 v1.2.5
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.7.0 // indirect
+	go.uber.org/atomic v1.6.0
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
 	google.golang.org/protobuf v1.23.0
 )
