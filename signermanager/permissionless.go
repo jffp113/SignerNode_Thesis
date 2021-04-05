@@ -273,7 +273,6 @@ func (p *permissionlessProtocol) Sign(data []byte, ctx signContext) {
 
 	if err != nil {
 		sendErrorMessage(request.responseChan, err)
-		logger.Error(err)
 		return
 	}
 
@@ -281,7 +280,6 @@ func (p *permissionlessProtocol) Sign(data []byte, ctx signContext) {
 
 	if err != nil {
 		sendErrorMessage(request.responseChan, err)
-		logger.Error(err)
 		return
 	}
 
@@ -289,7 +287,6 @@ func (p *permissionlessProtocol) Sign(data []byte, ctx signContext) {
 
 	if err != nil {
 		sendErrorMessage(request.responseChan, err)
-		logger.Error(err)
 		return
 	}
 
@@ -299,7 +296,7 @@ func (p *permissionlessProtocol) Sign(data []byte, ctx signContext) {
 func (p *permissionlessProtocol) signWithShare(req *pb.ClientSignMessage, scheme string, n, t int) ([]byte, error) {
 	key, exist := p.getInstalledKey(req.KeyId)
 
-	if exist {
+	if !exist {
 		return nil, errors.New("key does not exist or previously expired")
 	}
 
@@ -335,6 +332,7 @@ func (p *permissionlessProtocol) aggregateShares(req *request) ([]byte,string, e
 }
 
 func (p *permissionlessProtocol) InstallShares(data []byte) error {
+	logger.Info("Installing key share")
 	request := pb.ClientInstallShareRequest{}
 	err := proto.Unmarshal(data,&request)
 

@@ -227,7 +227,6 @@ func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
 
 	if err != nil {
 		sendErrorMessage(request.responseChan, err)
-		logger.Error(err)
 		return
 	}
 

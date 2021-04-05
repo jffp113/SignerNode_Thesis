@@ -67,6 +67,7 @@ func (n *network) Broadcast(msg []byte) error {
 }
 
 func (n *network) BroadcastToGroup(groupId string ,msg []byte) error {
+	logger.Infof("Broadcasting to group, %v",groupId)
 	n.groupsLock.Lock()
 	defer n.groupsLock.Unlock()
 
@@ -95,7 +96,7 @@ func (g Group) Broadcast(msg []byte,self peer.ID) error {
 }
 
 func (n *network) JoinGroup(groupId string) error {
-	logger.Debug("Joining group %v", groupId)
+	logger.Debugf("Joining group %v", groupId)
 	n.groupsLock.Lock()
 	defer n.groupsLock.Unlock()
 	topic, err := n.ps.Join(groupId)
@@ -200,6 +201,7 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 		self: h.ID(),
 		host: h,
 		disc: discovery,
+		groups: make(map[string]Group),
 	}
 
 	go network.mainGroup.processIncomingMsg(network)

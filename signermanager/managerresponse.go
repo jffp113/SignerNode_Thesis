@@ -24,6 +24,7 @@ type ManagerResponse struct {
 }
 
 func sendErrorMessage(c chan<- ManagerResponse, err error) {
+	logger.Error(err)
 	c <- ManagerResponse{
 		ResponseStatus: Error,
 		Err:            err,

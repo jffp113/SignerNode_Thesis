@@ -1,18 +1,52 @@
 package main
 
 import (
-	"github.com/jffp113/SignerNode_Thesis/client"
 	"fmt"
+	"github.com/jffp113/CryptoProviderSDK/example/handlers/tbls"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
+	"github.com/jffp113/SignerNode_Thesis/client"
 	"io/ioutil"
 	"net/http"
 	"time"
 )
 
+func permissionless(){
+	t := 1
+	n := 5
+	membership := []string{"localhost:8080","localhost:8081","localhost:8082","localhost:8083","localhost:8084"}
+	gen := tbls.NewTBLS256KeyGenerator()
+	pub, priv := gen.Gen(n,t)
+
+	k := client.Key{
+		T:               t,
+		N:               n,
+		Scheme:          "TBLS256",
+		ValidUntil:      time.Now().Add(-24 * time.Hour),
+		IsOneTimeKey:    false,
+		PubKey:          pub,
+		PrivKeys:        priv,
+		GroupMembership: membership,
+	}
+
+	c := client.NewPermissionlessClient()
+	err := c.InstallShare(&k)
+	if err != nil {
+		fmt.Println("failed ",err)
+		return
+	}
+	fmt.Println(k.GetKeyId())
+
+	//time.Sleep(10*time.Second)
+	v,err := c.SendSignRequest([]byte("Hello"), "intkey",&k)
+
+	fmt.Println(v,err)
+
+	fmt.Println(c.VerifySignature([]byte("Hello"),v.Signature,v.Scheme,&k))
+}
+
 func sign() {
 
-	c, _ := client.NewClient(client.SetProtocol("Permissioned"),
-		client.SetSignerNodeAddresses("localhost:8080"))
+	c, _ := client.NewPermissionedClient(client.SetSignerNodeAddresses("localhost:8080"))
 
 	start := time.Now()
 	resp, err := c.SendSignRequest([]byte("Hello"), "intkey")
@@ -55,6 +89,6 @@ func membership() {
 	fmt.Println(string(body))
 }
 
-//func main() {
-//	sign()
-//}
+func main() {
+	permissionless()
+}

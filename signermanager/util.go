@@ -39,7 +39,7 @@ func signWithShare(content []byte, privShare crypto.PrivateKey, crypto crypto.Co
 	return b, nil
 }
 
-func aggregateShares(req *request, pubKey crypto.PrivateKey, crypto crypto.ContextFactory) ([]byte, error) {
+func aggregateShares(req *request, pubKey crypto.PublicKey, crypto crypto.ContextFactory) ([]byte, error) {
 	context, closer := crypto.GetSignerVerifierAggregator(req.scheme)
 	defer closer.Close()
 

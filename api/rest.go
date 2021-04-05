@@ -28,21 +28,23 @@ func httpFuncHandler(w http.ResponseWriter, r *http.Request,
 		fmt.Println(b)
 		respChan := f(b)
 		resp := <-respChan
-
 		switch resp.ResponseStatus {
 		case signermanager.Ok:
+			logger.Debug("Execution Ok")
 			w.Write(resp.ResponseData)
-			//			w.WriteHeader(200)
+		case signermanager.InvalidTransaction:
+			fallthrough
 		case signermanager.Error:
-			w.Write([]byte(resp.Err.Error()))
+			logger.Debug("Execution Failed, ")
 			w.WriteHeader(500)
+			w.Write([]byte(resp.Err.Error()))
 		}
 	default:
 		w.WriteHeader(405)
 	}
 }
 
-func Init(port int, singFunc SignFunc, verifyFunc VerifyFunc, membershipFunc MembershipFunc, installShareFunc InstallShareFunc) {
+func Init(port int, singFunc SignFunc, verifyFunc VerifyFunc,installShareFunc InstallShareFunc, membershipFunc MembershipFunc) {
 	http.HandleFunc("/sign", func(writer http.ResponseWriter, request *http.Request) {
 		httpPostHandler(writer, request, singFunc)
 	})
@@ -50,7 +52,7 @@ func Init(port int, singFunc SignFunc, verifyFunc VerifyFunc, membershipFunc Mem
 		httpPostHandler(writer, request, verifyFunc)
 	})
 	http.HandleFunc("/install", func(writer http.ResponseWriter, request *http.Request) {
-		httpPostHandler(writer, request, verifyFunc)
+		httpPostHandler(writer, request, installShareFunc)
 	})
 	http.HandleFunc("/membership", func(writer http.ResponseWriter, request *http.Request) {
 		httpGetHandler(writer, request, membershipFunc)

@@ -1,52 +1,102 @@
 package client
 
 import (
-	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
-	"github.com/jffp113/CryptoProviderSDK/example/handlers/tbls"
-	"github.com/jffp113/CryptoProviderSDK/example/handlers/trsa"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
+	"go.uber.org/atomic"
+	"math/rand"
 	"net/http"
 	"time"
 )
 
 
-func (s *signerNodeClient) permissionlessProtocol(toSignBytes []byte, smartcontract string) (pb.ClientSignResponse, error) {
-	panic("implement me")
+//Key is a struct that aggregates everything
+//related to a installed key
+//The user of this API should keep it to ask
+//signer nodes to sign a transaction
+type Key struct {
+	T, N            int
+	Scheme          string
+	ValidUntil      time.Time
+	IsOneTimeKey    bool
+	used            atomic.Bool
+	PubKey          crypto.PublicKey
+	PrivKeys        crypto.PrivateKeyList
+	GroupMembership []string
 }
 
-type InstallMode int
-const (
-	GenerateAndInstallToKnow InstallMode = iota
-	GenerateAndInstallToMembership
-)
-
-func (s *signerNodeClient) InstallShare(mode InstallMode, t,n int, scheme string, validUntil time.Time, isOneTimeKey bool) error{
-	switch mode {
-	case GenerateAndInstallToKnow:
-		return s.generateAndInstallToKnow(t,n,scheme,validUntil,isOneTimeKey)
+func (k *Key) Validate() error{
+	if k.T > k.N {
+		return errors.New("T can not be higher than N")
+	} else if len(k.GroupMembership) != k.N {
+		return errors.New(fmt.Sprintf("group membership should have size %v",k.N))
+	} else if len(k.PrivKeys) != k.N {
+		return errors.New(fmt.Sprintf("priv keys should contain %v keys",k.N))
 	}
-	//TODO all known
-	//TODO get membership and install
-	return errors.New("mode does not exist")
+	return nil
 }
 
-func (s *signerNodeClient) generateAndInstallToKnow(t, n int, scheme string, validUntil time.Time, isOneTimeKey bool) error {
-	if len(s.signerNodeAddress) < n {
-		return errors.New("not enough signer nodes")
+func (k *Key) GetRandomGroupMember() string{
+	seed := time.Now().UTC().UnixNano()
+	rnd := rand.New(rand.NewSource(seed))
+
+	pos := rnd.Intn(len(k.GroupMembership))
+	return k.GroupMembership[pos]
+}
+
+func (k *Key) GetKeyId() (string,error) {
+	b,err := k.PubKey.MarshalBinary()
+
+	if err != nil {
+		return "",err
 	}
 
-	kg := getKeyGen(scheme)
+	h := sha256.New()
+	h.Write(b)
 
-	pub,privList := kg.Gen(n,t)
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
 
-	membership := getLocalSubsetMembership(s.signerNodeAddress,n)
+type PermissionlessClient interface {
+	SendSignRequest(toSignBytes []byte, smartcontract string,key *Key) (pb.ClientSignResponse, error)
+	VerifySignature(digest []byte, sig []byte, scheme string,key *Key) error
+	InstallShare(key *Key) error
+}
 
-	for i,k := range privList {
-		err := s.installShare(k,pub,validUntil,isOneTimeKey,membership[i])
+type permissionlessClient struct {}
+
+func (s permissionlessClient) SendSignRequest(toSignBytes []byte, smartcontract string,key *Key) (pb.ClientSignResponse, error) {
+	keyId,err := key.GetKeyId()
+	if err != nil {
+		return pb.ClientSignResponse{},err
+	}
+
+	return signPermissionless(toSignBytes,smartcontract,key.GetRandomGroupMember(),keyId)
+}
+
+func (s permissionlessClient) VerifySignature(digest []byte, sig []byte, scheme string, key *Key) error {
+	return verifySignature(digest,sig,scheme,key.PubKey,key.GetRandomGroupMember())
+}
+
+func NewPermissionlessClient() PermissionlessClient {
+	return permissionlessClient{}
+}
+
+func (s permissionlessClient) InstallShare(key *Key) error{
+	if err := key.Validate(); err != nil {
+		return err
+	}
+
+	//membership := getLocalSubsetMembership(s.signerNodeAddress,N)
+	for i,privKeyShare := range key.PrivKeys {
+		err := s.installShare(privKeyShare,key.PubKey,key.ValidUntil,
+			key.IsOneTimeKey,key.GroupMembership[i])
 		if err != nil {
 			return err
 		}
@@ -55,8 +105,29 @@ func (s *signerNodeClient) generateAndInstallToKnow(t, n int, scheme string, val
 	return nil
 }
 
+/*func (s *permisisonedClient) generateAndInstallToKnow(T, N int, Scheme string, ValidUntil time.Time, IsOneTimeKey bool) error {
+	if len(s.signerNodeAddress) < N {
+		return errors.New("not enough signer nodes")
+	}
 
-func (s *signerNodeClient) installShare(priv crypto.PrivateKey,pub crypto.PublicKey,validUntil time.Time,
+	kg := getKeyGen(Scheme)
+
+	pub,privList := kg.Gen(N,T)
+
+	membership := getLocalSubsetMembership(s.signerNodeAddress,N)
+
+	for i,k := range privList {
+		err := s.installShare(k,pub,ValidUntil,IsOneTimeKey,membership[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}*/
+
+
+func (s permissionlessClient) installShare(priv crypto.PrivateKey,pub crypto.PublicKey,validUntil time.Time,
 	isOneTimeKey bool, address string) error{
 
 	privBytes,_ := priv.MarshalBinary()
@@ -82,16 +153,4 @@ func (s *signerNodeClient) installShare(priv crypto.PrivateKey,pub crypto.Public
 	_, err = http.Post(completeAddress, "application/protobuf", reader)
 
 	return err
-}
-
-
-func getKeyGen(scheme string) crypto.KeyShareGenerator {
-	switch scheme {
-	case "TBLS256":
-		return tbls.NewTBLS256KeyGenerator()
-	case "TRSA1024":
-		return trsa.NewTRSAKeyGenerator()
-	default:
-		return nil
-	}
 }

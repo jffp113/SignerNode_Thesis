@@ -5,17 +5,10 @@ const (
 	PermissionlessProtocol = "Permissionless"
 )
 
-type Config func(m *signerNodeClient) error
+type PermissionedConfig func(m *permisisonedClient) error
 
-func SetProtocol(protocol string) Config {
-	return func(m *signerNodeClient) error {
-		m.protocol = protocol
-		return nil
-	}
-}
-
-func SetSignerNodeAddresses(addresses ...string) Config {
-	return func(m *signerNodeClient) error {
+func SetSignerNodeAddresses(addresses ...string) PermissionedConfig {
+	return func(m *permisisonedClient) error {
 		m.signerNodeAddress = addresses
 		return nil
 	}

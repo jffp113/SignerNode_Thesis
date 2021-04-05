@@ -82,6 +82,7 @@ func mainSignerNode() {
 		log.SetAllLoggers(log.LevelWarn)
 	}
 	_ = log.SetLogLevel("dht", "warn")
+	_ = log.SetLogLevel("peerqueue", "warn")
 
 	sm := signermanager.NewSignerManager(
 		signermanager.SetBootStrapNode(opts.BootstrapNode),
