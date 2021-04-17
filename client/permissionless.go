@@ -105,27 +105,6 @@ func (s permissionlessClient) InstallShare(key *Key) error{
 	return nil
 }
 
-/*func (s *permisisonedClient) generateAndInstallToKnow(T, N int, Scheme string, ValidUntil time.Time, IsOneTimeKey bool) error {
-	if len(s.signerNodeAddress) < N {
-		return errors.New("not enough signer nodes")
-	}
-
-	kg := getKeyGen(Scheme)
-
-	pub,privList := kg.Gen(N,T)
-
-	membership := getLocalSubsetMembership(s.signerNodeAddress,N)
-
-	for i,k := range privList {
-		err := s.installShare(k,pub,ValidUntil,IsOneTimeKey,membership[i])
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}*/
-
 
 func (s permissionlessClient) installShare(priv crypto.PrivateKey,pub crypto.PublicKey,validUntil time.Time,
 	isOneTimeKey bool, address string) error{

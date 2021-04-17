@@ -51,6 +51,7 @@ func sign() {
 	start := time.Now()
 	resp, err := c.SendSignRequest([]byte("Hello"), "intkey")
 
+	fmt.Println(resp)
 	t := time.Now()
 	elapsed := t.Sub(start)
 
@@ -90,5 +91,5 @@ func membership() {
 }
 
 func main() {
-	permissionless()
+	sign()
 }

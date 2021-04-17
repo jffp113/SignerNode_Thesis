@@ -1,6 +1,7 @@
 package signermanager
 
 import (
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"github.com/jffp113/SignerNode_Thesis/network"
 	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
@@ -47,6 +48,10 @@ type signermanager struct {
 	scFactory smartcontractengine.SCContextFactory
 	scURI     string
 	peerPort  int
+
+	//Interconnect to talk to a sign manager protocol / verify
+	//and membership
+	interconnect ic.Interconnect
 }
 
 func NewSignerManager(confs ...Config) *signermanager {
@@ -98,19 +103,30 @@ func (s *signermanager) Init() error {
 
 	s.protocol = p
 
+	s.interconnect,_ = ic.NewInterconnect(ic.SetContext(ic.P2pContext{
+								Broadcast:        s.network.Broadcast,
+								BroadcastToGroup: s.network.BroadcastToGroup,
+								JoinGroup:        s.network.JoinGroup,
+								LeaveGroup:       s.network.LeaveGroup,
+						}))
+
+	s.interconnect.RegisterHandler(ic.VerifyClientRequest,s.verify)
+	s.interconnect.RegisterHandler(ic.MembershipClientRequest,s.getMembership)
+	s.protocol.Register(s.interconnect.RegisterHandler)
+
 	s.startNetworkReceiver()
 	s.startWorkers()
 
 	return nil
 }
 
-type signContext struct {
-	returnChan chan<- ManagerResponse
-	broadcast  func(msg []byte) error
-	broadcastToGroup func(groupId string ,msg []byte) error
-	joinGroup func(groupId string) error
-	leaveGroup func(groupId string) error
-}
+//type signContext struct {
+//	returnChan chan<- ManagerResponse
+//	broadcast  func(msg []byte) error
+//	broadcastToGroup func(groupId string ,msg []byte) error
+//	joinGroup func(groupId string) error
+//	leaveGroup func(groupId string) error
+//}
 
 type processContext struct {
 	broadcast func(msg []byte) error
@@ -119,70 +135,34 @@ type processContext struct {
 	leaveGroup func(groupId string) error
 }
 
-func (s *signermanager) Sign(data []byte) <-chan ManagerResponse {
-	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
-	go s.protocol.Sign(data, signContext{
-		returnChan:       ch,
-		broadcast:        s.network.Broadcast,
-		broadcastToGroup: s.network.BroadcastToGroup,
-		joinGroup:        s.network.JoinGroup,
-		leaveGroup:       s.network.LeaveGroup,
-	})
-
-	return ch
+//Emit a specific event type (HandlerType) in a defined protocol
+//or in the signer manager.
+func (s *signermanager) EmitEvent(t ic.HandlerType, content []byte) ic.HandlerResponse {
+	return s.interconnect.EmitEvent(t,content)
 }
 
-func (s *signermanager) InstallShares(data []byte) <-chan ManagerResponse {
-	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
-	go func() {
-		err := s.protocol.InstallShares(data)
-		if err != nil {
-			sendErrorMessage(ch,err)
-		}
-		sendOkMessage(ch,[]byte{})
-	}()
+func (s *signermanager) verify(data []byte,ctx ic.P2pContext) ic.HandlerResponse {
+	msg := pb.ClientVerifyMessage{}
+	err := proto.Unmarshal(data, &msg)
 
-	return ch
+	if err != nil {
+		return ic.CreateErrorMessage(err)
+	}
+
+	context, c := s.cryptoFactory.GetSignerVerifierAggregator(msg.Scheme)
+	defer c.Close()
+	pubKey := keychain.ConvertBytesToPubKey(msg.PublicKey)
+	err = context.Verify(msg.Signature, msg.Digest, pubKey)
+
+	if err != nil {
+		return createInvalidMessageVerifyResponse()
+	}
+
+	return createValidMessageVerifyMessages()
 }
 
-func (s *signermanager) Verify(data []byte) <-chan ManagerResponse {
-	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
-
-	go func() {
-		msg := pb.ClientVerifyMessage{}
-		err := proto.Unmarshal(data, &msg)
-
-		if err != nil {
-			ch <- ManagerResponse{Error,
-				nil,
-				err}
-		}
-
-		context, c := s.cryptoFactory.GetSignerVerifierAggregator(msg.Scheme)
-		defer c.Close()
-		pubKey := keychain.ConvertBytesToPubKey(msg.PublicKey)
-		err = context.Verify(msg.Signature, msg.Digest, pubKey)
-
-		if err != nil {
-			createInvalidMessageVerifyResponse(ch)
-			return
-		}
-
-		createValidMessageVerifyMessages(ch)
-	}()
-
-	return ch
-}
-
-func (s *signermanager) GetMembership() <-chan ManagerResponse {
-	ch := make(chan ManagerResponse, 1) //TODO maybe a pool of protocol workers?
-	//TODO
-
-	go func() {
-		createValidMembershipResponse(s.network.GetMembership(), ch)
-	}()
-
-	return ch
+func (s *signermanager) getMembership(data []byte,ctx ic.P2pContext) ic.HandlerResponse {
+	return createValidMembershipResponse(s.network.GetMembership())
 }
 
 func (s *signermanager) startWorkers() {

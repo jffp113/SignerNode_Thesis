@@ -1,6 +1,7 @@
 package signermanager
 
 import (
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"errors"
@@ -19,10 +20,10 @@ type permissionedProtocol struct {
 	sc          smartcontractengine.SCContextFactory
 }
 
-func (p *permissionedProtocol) InstallShares(data []byte) error {
-	return errors.New("Operation not supported")
-	//TODO change the protocols to a event base where it is necessary to register every
-	//TODO operation (message) supported. This will improve code readability
+func (p *permissionedProtocol) Register(register func(t ic.HandlerType, handler ic.Handler)) error {
+	register(ic.SignClientRequest,p.sign)
+	//register(ic.NetworkMessage,p.processMessage)
+	return nil
 }
 
 func (p *permissionedProtocol) addRequest(req *request, uuid string) {
@@ -62,7 +63,7 @@ func (r *permissionedProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid str
 	return v, false
 }
 
-func (p *permissionedProtocol) ProcessMessage(data []byte, ctx processContext) {
+func (p *permissionedProtocol) ProcessMessage(data []byte, ctx processContext){
 	logger.Debug("Received Sign Request, processing.")
 
 	req := pb.ProtocolMessage{}
@@ -72,12 +73,12 @@ func (p *permissionedProtocol) ProcessMessage(data []byte, ctx processContext) {
 	case pb.ProtocolMessage_SIGN_REQUEST:
 		p.processMessageSignRequest(&req, ctx)
 	case pb.ProtocolMessage_SIGN_RESPONSE:
-		p.processMessageSignResponse(&req, ctx)
+		p.processMessageSignResponse(&req)
 	}
-
+	//return ic.CreateOkMessage(data)
 }
 
-func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessage, ctx processContext) {
+func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessage) {
 	logger.Debug("Received Sign Response")
 	signatureMsg := pb.SignResponse{}
 
@@ -121,7 +122,7 @@ func (p *permissionedProtocol) processMessageSignResponse(req *pb.ProtocolMessag
 			}
 			bytes, err := proto.Marshal(&resp)
 
-			sendOkMessage(v.responseChan, bytes)
+			ic.SendOkMessage(v.responseChan, bytes)
 			p.deleteRequest(v.uuid)
 			close(v.responseChan)
 			return
@@ -173,16 +174,14 @@ func (p *permissionedProtocol) processMessageSignRequest(req *pb.ProtocolMessage
 	ctx.broadcast(data)
 }
 
-func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
+func (p *permissionedProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
 	logger.Infof("Broadcasting %v", string(data))
 
 	req := pb.ClientSignMessage{}
 	err := proto.Unmarshal(data, &req)
 
 	if err != nil {
-		sendErrorMessage(ctx.returnChan, err)
-		logger.Error(err)
-		return
+		return ic.CreateErrorMessage(err)
 	}
 
 	smartContext, closer := p.sc.GetContext(req.SmartContractAddress)
@@ -191,17 +190,16 @@ func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
 	logger.Debugf("SmartContract Execution Result: %v", signInfo)
 
 	if signInfo.Error {
-		sendErrorMessage(ctx.returnChan, errors.New("error executing smartcontract"))
-		return
+		return ic.CreateErrorMessage(errors.New("error executing smartcontract"))
 	}
 
 	if !signInfo.Valid {
-		sendInvalidTransactionMessage(ctx.returnChan)
-		return
+		return ic.CreateInvalidTransactionMessage()
 	}
 
+	respChan := make(chan ic.HandlerResponse,1)
 	request := &request{
-		responseChan: ctx.returnChan,
+		responseChan: respChan,
 		shares:       make([][]byte, 0),
 		sharesChan:   make(chan []byte, signInfo.N),
 		t:            signInfo.T,
@@ -216,21 +214,19 @@ func (p *permissionedProtocol) Sign(data []byte, ctx signContext) {
 	signReq, err := createProtocolMessage(data, pb.ProtocolMessage_SIGN_REQUEST)
 
 	if err != nil {
-		sendErrorMessage(request.responseChan, err)
-		logger.Error(err)
-		return
+		ic.CreateErrorMessage(err)
 	}
 
-	ctx.broadcast(signReq)
+	ctx.Broadcast(signReq)
 
 	sigShare, err := p.signWithShare(&req, request.scheme, request.n, request.t)
 
 	if err != nil {
-		sendErrorMessage(request.responseChan, err)
-		return
+		return ic.CreateErrorMessage(err)
 	}
 
 	request.AddSigAndCheckIfHaveEnoughShares(sigShare) //TODO concurrency error until now not triggered
+	return <-respChan
 }
 
 func (p *permissionedProtocol) signWithShare(req *pb.ClientSignMessage, scheme string, n, t int) ([]byte, error) {

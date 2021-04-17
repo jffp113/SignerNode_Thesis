@@ -1,16 +1,22 @@
 package signermanager
 
 import (
-	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"github.com/golang/protobuf/proto"
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 )
 
 type byzantineProtocol struct {
 }
 
-func (p *byzantineProtocol) InstallShares(data []byte) error {
-	//errors.New("operation not supported")
+func (p *byzantineProtocol) Register(register func(t ic.HandlerType, handler ic.Handler)) error {
+	register(ic.SignClientRequest,p.Sign)
+	register(ic.InstallClientRequest,p.InstallShares)
 	return nil
+}
+
+func (p *byzantineProtocol) InstallShares(data []byte,ctx ic.P2pContext) ic.HandlerResponse {
+	return ic.CreateOkMessage([]byte{})
 }
 
 func (p *byzantineProtocol) ProcessMessage(data []byte, ctx processContext) {
@@ -30,7 +36,6 @@ func (p *byzantineProtocol) ProcessMessage(data []byte, ctx processContext) {
 
 func (p *byzantineProtocol) processMessageSignResponse(req *pb.ProtocolMessage, ctx processContext) {
 	logger.Debug("Byzantine Do nothing")
-
 }
 
 func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, ctx processContext) {
@@ -60,11 +65,11 @@ func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, c
 	ctx.broadcast(data)
 }
 
-func (p *byzantineProtocol) Sign(data []byte, ctx signContext) {
+func (p *byzantineProtocol) Sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
 	//Do nothing
+	return ic.CreateOkMessage([]byte{})
 }
 
 func NewByzantineProtocol() Protocol {
-
 	return &byzantineProtocol{}
 }

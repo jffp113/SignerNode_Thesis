@@ -101,5 +101,5 @@ func mainSignerNode() {
 		os.Exit(1)
 	}
 
-	api.Init(opts.ApiPort, sm.Sign, sm.Verify,sm.InstallShares, api.ConvertToGeneric(sm.GetMembership))
+	api.Init(opts.ApiPort, sm.EmitEvent)
 }

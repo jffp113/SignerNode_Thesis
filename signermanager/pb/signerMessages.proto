@@ -70,7 +70,6 @@ message ClientVerifyResponse{
     OK = 1;
     INVALID = 2;
   }
-
   Status status = 1;
 }
 
@@ -93,8 +92,6 @@ message MembershipResponse{
 message ClientInstallShareRequest{
   bytes public_key = 1;
   bytes private_key = 2;
-  //	validUntil   time.Time
-  //	isOneTimeKey bool
 
   // ValidUntil represents time that the key expire
   // as a Unix time (the number of seconds elapsed

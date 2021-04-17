@@ -1,6 +1,7 @@
 package signermanager
 
 import (
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"github.com/jffp113/SignerNode_Thesis/network"
 	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"errors"
@@ -16,8 +17,9 @@ const BYZANTINE = "Byzantine"
 
 type Protocol interface {
 	ProcessMessage(data []byte, ctx processContext)
-	Sign(data []byte, ctx signContext)
-	InstallShares(data []byte) error
+	//Sign(data []byte, ctx signContext)
+	//InstallShares(data []byte) error
+	Register(func(t ic.HandlerType, handler ic.Handler)) error
 }
 
 func GetProtocol(protocolName string, factory crypto.ContextFactory,
@@ -40,7 +42,7 @@ type request struct {
 	//in the signature shares slice
 	lock sync.Mutex
 	//Chan to respond to the client
-	responseChan chan<- ManagerResponse
+	responseChan chan<- ic.HandlerResponse
 	//Signature shares from every signernode
 	shares                [][]byte
 	sharesChan            chan []byte
