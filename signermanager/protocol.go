@@ -16,10 +16,10 @@ const PERMISSIONLESS = "Permissionless"
 const BYZANTINE = "Byzantine"
 
 type Protocol interface {
-	ProcessMessage(data []byte, ctx processContext)
-	//Sign(data []byte, ctx signContext)
-	//InstallShares(data []byte) error
-	Register(func(t ic.HandlerType, handler ic.Handler)) error
+	//ProcessMessage(data []byte, ctx processContext)
+	//sign(data []byte, ctx signContext)
+	//installShares(data []byte) error
+	Register(ic ic.Interconnect) error
 }
 
 func GetProtocol(protocolName string, factory crypto.ContextFactory,

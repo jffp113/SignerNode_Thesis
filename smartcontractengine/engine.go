@@ -23,9 +23,9 @@ type scClient struct {
 }
 
 type context struct {
-	scAddress string
-	client    *scClient
-	worker    *messaging.ZmqConnection
+	scID   string
+	client *scClient
+	worker *messaging.ZmqConnection
 }
 
 func (c *context) Close() error {
@@ -37,12 +37,12 @@ func (c *context) InvokeSmartContract(payload []byte) ScResponse {
 
 	req := pb.SmartContractValidationRequest{
 		Payload:              payload,
-		SmartContractAddress: c.scAddress,
+		SmartContractAddress: c.scID,
 	}
 
-	handlerId := c.client.handlers[c.scAddress]
+	handlerAddress := c.client.handlers[c.scID]
 
-	msg, _, _ := pb.CreateHandlerMessage(pb.Message_SMART_CONTRACT_VALIDATE_REQUEST, &req, handlerId)
+	msg, _, _ := pb.CreateHandlerMessage(pb.Message_SMART_CONTRACT_VALIDATE_REQUEST, &req, handlerAddress,c.scID)
 
 	reply, err := c.sendHandlerMessageAndReceiveResponse(msg)
 
@@ -157,14 +157,14 @@ func (c *scClient) processNewHandlers() {
 			logger.Warnf("Error Ignoring register handler MSG: %v", err)
 			continue
 		}
-		logger.Debugf("Registering %v from %v", req.SmartContractAddress, newMsg.HandlerId)
+		logger.Debugf("Registering %v from %v", req.SmartContractAddress, newMsg.HandlerAddr)
 
-		c.handlers[req.SmartContractAddress] = newMsg.HandlerId
+		c.handlers[req.SmartContractAddress] = newMsg.HandlerAddr
 
 		rep := pb.SmartContractRegisterResponse{Status: pb.SmartContractRegisterResponse_OK}
 
 		handlerMsg, _, err := pb.CreateMessageWithCorrelationId(pb.Message_SMART_CONTRACT_REGISTER_RESPONSE,
-			&rep, newMsg.CorrelationId, newMsg.HandlerId)
+			&rep, newMsg.CorrelationId,newMsg.HandlerAddr,newMsg.HandlerId)
 
 		if err != nil {
 			logger.Warnf("Error Ignoring register handler MSG: %v", err)
@@ -179,7 +179,7 @@ func (c *scClient) processNewHandlers() {
 }
 
 func (c *scClient) handleConnSocket() {
-	handlerId, data, err := c.conn.RecvData()
+	addr, data, err := c.conn.RecvData()
 
 	if err != nil {
 		logger.Warnf("Error Ignoring MSG: %v", err)
@@ -197,7 +197,7 @@ func (c *scClient) handleConnSocket() {
 
 	if msg.MessageType == pb.Message_SMART_CONTRACT_REGISTER_REQUEST {
 		logger.Debug("Register Handler MSG received")
-		msg.HandlerId = handlerId
+		msg.HandlerAddr = addr
 		c.registerHandlerChan <- &msg
 	} else {
 		logger.Debug("Received response from a handler")
@@ -232,7 +232,7 @@ func (c *scClient) handleClientSocket() {
 
 	c.requests[handlerMsg.CorrelationId] = clientId
 
-	err = c.conn.SendData(handlerMsg.HandlerId, data)
+	err = c.conn.SendData(handlerMsg.HandlerAddr, data)
 	logger.Debug("Sent msg out to signer")
 
 	if err != nil {

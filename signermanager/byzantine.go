@@ -9,9 +9,10 @@ import (
 type byzantineProtocol struct {
 }
 
-func (p *byzantineProtocol) Register(register func(t ic.HandlerType, handler ic.Handler)) error {
-	register(ic.SignClientRequest,p.Sign)
-	register(ic.InstallClientRequest,p.InstallShares)
+func (p *byzantineProtocol) Register(interconnect ic.Interconnect) error {
+	interconnect.RegisterHandler(ic.SignClientRequest,p.Sign)
+	interconnect.RegisterHandler(ic.InstallClientRequest,p.InstallShares)
+	interconnect.RegisterHandler(ic.NetworkMessage,p.processMessage)
 	return nil
 }
 
@@ -19,8 +20,8 @@ func (p *byzantineProtocol) InstallShares(data []byte,ctx ic.P2pContext) ic.Hand
 	return ic.CreateOkMessage([]byte{})
 }
 
-func (p *byzantineProtocol) ProcessMessage(data []byte, ctx processContext) {
-	logger.Debug("Received Sign Request, processing.")
+func (p *byzantineProtocol) processMessage(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
+	logger.Debug("Received sign Request, processing.")
 
 	req := pb.ProtocolMessage{}
 	proto.Unmarshal(data, &req)
@@ -31,15 +32,15 @@ func (p *byzantineProtocol) ProcessMessage(data []byte, ctx processContext) {
 	case pb.ProtocolMessage_SIGN_RESPONSE:
 		p.processMessageSignResponse(&req, ctx)
 	}
-
+	return ic.CreateOkMessage(data)
 }
 
-func (p *byzantineProtocol) processMessageSignResponse(req *pb.ProtocolMessage, ctx processContext) {
+func (p *byzantineProtocol) processMessageSignResponse(req *pb.ProtocolMessage, ctx ic.P2pContext) {
 	logger.Debug("Byzantine Do nothing")
 }
 
-func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, ctx processContext) {
-	logger.Debug("Received Sign(Byzantine) Request")
+func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, ctx ic.P2pContext) {
+	logger.Debug("Received sign(Byzantine) Request")
 	reqSign := pb.ClientSignMessage{}
 	err := proto.Unmarshal(req.Content, &reqSign)
 
@@ -62,7 +63,7 @@ func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, c
 
 	data, err = createProtocolMessage(data, pb.ProtocolMessage_SIGN_RESPONSE)
 
-	ctx.broadcast(data)
+	ctx.Broadcast(data)
 }
 
 func (p *byzantineProtocol) Sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	_ "expvar"
 	"fmt"
 	"github.com/ipfs/go-log"
 	"github.com/jessevdk/go-flags"
@@ -10,6 +11,7 @@ import (
 	"github.com/jffp113/SignerNode_Thesis/network"
 	"github.com/jffp113/SignerNode_Thesis/signermanager"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 )
@@ -92,6 +94,7 @@ func mainSignerNode() {
 		signermanager.SetScURI(opts.ScURI),
 		signermanager.SetPeerPort(opts.PeerPort),
 	)
+
 
 	//Initiate signermanager
 	err = sm.Init()

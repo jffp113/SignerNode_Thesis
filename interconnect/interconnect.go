@@ -11,6 +11,9 @@ var logger = log.Logger("interconnect")
 const (
 	//Size of waiting events
 	EventPoolSize = 100
+
+	//Default Number of Workers
+	WORKERS = 20
 )
 
 //P2pContext defines a P2P network P2pContext used by different
@@ -78,8 +81,8 @@ func NewInterconnect(configs ...Config) (*interconnect,error){
 	ic := interconnect{
 		handlers:  make(map[HandlerType][]Handler),
 		eventChan: make(chan event,EventPoolSize),
-		nWorkers:  10,
-		cancel: func() {},
+		nWorkers:  WORKERS,
+		cancel:    func() {},
 	}
 
 	//process every given configuration

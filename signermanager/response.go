@@ -65,3 +65,20 @@ func peerAddressesToStringSlice(addr []ma.Multiaddr) []string {
 
 	return result
 }
+
+func createSignResponse(UUID string, signature []byte) ([]byte,error){
+	resp := pb.SignResponse{
+		UUID:      UUID,
+		Signature: signature,
+	}
+
+	respData, err := proto.Marshal(&resp)
+
+	if err != nil {
+		logger.Error(err)
+		return []byte{},err
+	}
+
+	return createProtocolMessage(respData, pb.ProtocolMessage_SIGN_RESPONSE)
+}
+

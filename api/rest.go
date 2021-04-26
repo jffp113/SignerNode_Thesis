@@ -25,7 +25,6 @@ func httpFuncHandler(w http.ResponseWriter, r *http.Request,
 	case method:
 		b, _ := ioutil.ReadAll(r.Body)
 
-		fmt.Println(b)
 		resp := f(b)
 
 		switch resp.ResponseStatus {
@@ -37,33 +36,47 @@ func httpFuncHandler(w http.ResponseWriter, r *http.Request,
 		case ic.Error:
 			logger.Debug("Execution Failed, ")
 			w.WriteHeader(500)
-			w.Write([]byte(resp.Err.Error()))
+			if resp.Err != nil {
+				w.Write([]byte(resp.Err.Error()))
+			}
 		}
 	default:
 		w.WriteHeader(405)
 	}
 }
 
-func Init(port int, emitEvent func(t ic.HandlerType, content []byte) ic.HandlerResponse) {
-	http.HandleFunc("/sign", func(writer http.ResponseWriter, request *http.Request) {
+func initHttp(port int, emitEvent EmitFunc, handleFuncRegister HandleFunc){
+	handleFuncRegister("/sign", func(writer http.ResponseWriter, request *http.Request) {
 		httpPostHandler(writer, request, func(data []byte) ic.HandlerResponse {
 			return emitEvent(ic.SignClientRequest,data)
 		})
 	})
-	http.HandleFunc("/verify", func(writer http.ResponseWriter, request *http.Request) {
+
+	handleFuncRegister("/verify", func(writer http.ResponseWriter, request *http.Request) {
 		httpPostHandler(writer, request, func(data []byte) ic.HandlerResponse {
 			return emitEvent(ic.VerifyClientRequest,data)
 		})
 	})
-	http.HandleFunc("/install", func(writer http.ResponseWriter, request *http.Request) {
+
+	handleFuncRegister("/install", func(writer http.ResponseWriter, request *http.Request) {
 		httpPostHandler(writer, request, func(data []byte) ic.HandlerResponse {
 			return emitEvent(ic.InstallClientRequest,data)
 		})
 	})
-	http.HandleFunc("/membership", func(writer http.ResponseWriter, request *http.Request) {
+
+	handleFuncRegister("/membership", func(writer http.ResponseWriter, request *http.Request) {
 		httpGetHandler(writer, request, func(data []byte) ic.HandlerResponse {
 			return emitEvent(ic.MembershipClientRequest,data)
 		})
 	})
+
+
+}
+
+type EmitFunc func(t ic.HandlerType, content []byte) ic.HandlerResponse
+type HandleFunc func(pattern string, handler func(http.ResponseWriter, *http.Request))
+
+func Init(port int, emitEvent EmitFunc) {
+	initHttp(port,emitEvent,http.HandleFunc)
 	logger.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }

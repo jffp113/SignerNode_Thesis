@@ -11,7 +11,7 @@ import (
 )
 
 func permissionless(){
-	t := 1
+	t := 3
 	n := 5
 	membership := []string{"localhost:8080","localhost:8081","localhost:8082","localhost:8083","localhost:8084"}
 	gen := tbls.NewTBLS256KeyGenerator()
@@ -21,7 +21,7 @@ func permissionless(){
 		T:               t,
 		N:               n,
 		Scheme:          "TBLS256",
-		ValidUntil:      time.Now().Add(-24 * time.Hour),
+		ValidUntil:      time.Now().Add(24 * time.Hour),
 		IsOneTimeKey:    false,
 		PubKey:          pub,
 		PrivKeys:        priv,
@@ -92,4 +92,5 @@ func membership() {
 
 func main() {
 	sign()
+	//permissionless()
 }

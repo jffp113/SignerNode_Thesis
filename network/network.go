@@ -1,3 +1,7 @@
+//Package network defines the a wrapper over LibP2P
+//library allowing users of this package to easily
+//create a publish/subscriber system over a P2P network
+//with discovery functionalities
 package network
 
 import (
@@ -11,21 +15,28 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"go.uber.org/atomic"
 	"sync"
 	"time"
 )
 
 var logger = log.Logger("network")
 
-const NetworkBufSize = 128
+//BufSize defines the max size of message waiting to be processed
+//by a go routine
+const BufSize = 128
 
+//NetConfig is used to configure the p2p network
+//gives the possibility to:
+//choose other RendezvousString (default: network) to advertise a certain peer;
+//set a port where the peer is going to be available;
+//Choose the private key which will represent the peer id;
+//And set the bootstrap peers to find other peers in the P2P network.
 type NetConfig struct {
 	RendezvousString string
 	BootstrapPeers   []string
 	Port             int
 	Priv             crypto.PrivKey
-	//ListenAddresses  addrList
-	//ProtocolID       string
 }
 
 type network struct {
@@ -42,8 +53,16 @@ type network struct {
 
 	groupsLock sync.Mutex
 	groups     map[string]Group
+
+	//numberOfRoutines is used to own how many
+	//go routines are still using messages chan
+	//when this variable reaches zero a go routine
+	//closes the channel.
+	numberOfRoutines atomic.Int32
 }
 
+//A group defines a topic in witch a peer
+//is listening and publishing
 type Group struct {
 	topic    *pubsub.Topic
 	sub      *pubsub.Subscription
@@ -53,12 +72,22 @@ type Group struct {
 }
 
 type Network interface {
+	//Broadcast broadcasts to all available peers
 	Broadcast(msg []byte) error
+	//BroadcastToGroup, broadcasts to all peers subscribed
+	//to a certain group
 	BroadcastToGroup(groupId string ,msg []byte) error
 	//Send(node string, msg []byte)
+	//JoinGroup - Joins a certain broadcast group
 	JoinGroup(groupId string) error
+	//LeaveGroup - Leaves a certain broadcast group
 	LeaveGroup(groupId string) error
+
+	//Receive messages from all subscribed groups and
+	//from the default group
 	Receive() []byte
+
+	//Get a subset of the peers membership available
 	GetMembership() []peer.AddrInfo
 }
 
@@ -187,7 +216,7 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 		return nil, err
 	}
 
-	msgChan := make(chan []byte, NetworkBufSize)
+	msgChan := make(chan []byte, BufSize)
 
 	network := &network{
 		messages: msgChan,
@@ -212,23 +241,20 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 }
 
 func (g Group) processIncomingMsg(n *network) {
+	n.numberOfRoutines.Inc()
 	for {
-
-		select {
-		case _ = <-g.ctx.Done():
-			return
-		default:
-		}
-
 		logger.Debug("Waiting for new message")
 		msg, err := g.sub.Next(g.ctx)
-		logger.Debugf("New message arrived from", msg.ReceivedFrom)
 
 		if err != nil {
 			logger.Debug(err)
-			close(n.messages)
+			n.numberOfRoutines.Dec()
+			if n.numberOfRoutines.Load() == 0{
+				close(n.messages)
+			}
 			return
 		}
+		logger.Debugf("New message arrived from", msg.ReceivedFrom)
 		// only forward messages delivered by others
 
 		if msg.ReceivedFrom == n.self {
@@ -266,15 +292,15 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 
 }
 
-func showConnectedListPeers(n *network) {
-	go func() {
-		for {
-
-			fmt.Printf("PubSub: %v\n", n.ps.ListPeers("SignerNodeNetwork"))
-			time.Sleep(10 * time.Second)
-		}
-	}()
-}
+//func showConnectedListPeers(n *network) { //TODO to be deleted
+//	go func() {
+//		for {
+//
+//			fmt.Printf("PubSub: %v\n", n.ps.ListPeers("SignerNodeNetwork"))
+//			time.Sleep(10 * time.Second)
+//		}
+//	}()
+//}
 
 func NewBootstrapNode(ctx context.Context, config NetConfig) error {
 	h, err := newPeerHost(config)

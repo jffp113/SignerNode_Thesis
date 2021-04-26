@@ -112,7 +112,7 @@ func (s *signermanager) Init() error {
 
 	s.interconnect.RegisterHandler(ic.VerifyClientRequest,s.verify)
 	s.interconnect.RegisterHandler(ic.MembershipClientRequest,s.getMembership)
-	s.protocol.Register(s.interconnect.RegisterHandler)
+	s.protocol.Register(s.interconnect)
 
 	s.startNetworkReceiver()
 	s.startWorkers()
@@ -172,12 +172,13 @@ func (s *signermanager) startWorkers() {
 				select {
 				case data := <-s.workPool:
 					logger.Debug("Start Processing Worker")
-					s.protocol.ProcessMessage(data, processContext{
-						broadcast:		  s.network.Broadcast,
-						broadcastToGroup: s.network.BroadcastToGroup,
-						joinGroup:        s.network.JoinGroup,
-						leaveGroup:       s.network.LeaveGroup,
-					})
+					//s.protocol.ProcessMessage(data, processContext{
+					//	broadcast:		  s.network.Broadcast,
+					//	broadcastToGroup: s.network.BroadcastToGroup,
+					//	joinGroup:        s.network.JoinGroup,
+					//	leaveGroup:       s.network.LeaveGroup,
+					//})
+					s.interconnect.EmitEvent(ic.NetworkMessage,data)
 					logger.Debug("Finish Processing Worker")
 				case _ = <-s.context.Done():
 					return

@@ -27,13 +27,16 @@ type permissionlessProtocol struct {
 	crypto  crypto.ContextFactory
 	sc      smartcontractengine.SCContextFactory
 	network network.Network
+
+	interconnect ic.Interconnect
 }
 
 
-func (p *permissionlessProtocol) Register(register func(t ic.HandlerType, handler ic.Handler)) error {
-	register(ic.SignClientRequest,p.Sign)
-	register(ic.InstallClientRequest,p.InstallShares)
-	//register(ic.NetworkMessage,p.processMessage)
+func (p *permissionlessProtocol) Register(interconnect ic.Interconnect) error {
+	interconnect.RegisterHandler(ic.SignClientRequest,p.sign)
+	interconnect.RegisterHandler(ic.InstallClientRequest,p.installShares)
+	interconnect.RegisterHandler(ic.NetworkMessage,p.processMessage)
+	p.interconnect = interconnect
 	return nil
 }
 
@@ -126,27 +129,27 @@ func (r *permissionlessProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid s
 	return v, false
 }
 
-func (p *permissionlessProtocol) ProcessMessage(data []byte, ctx processContext){
-	logger.Debug("Received Sign Request, processing.")
+func (p *permissionlessProtocol) processMessage(data []byte, ctx ic.P2pContext) ic.HandlerResponse{
+	logger.Debug("Received sign Request, processing.")
 
 	req := pb.ProtocolMessage{}
 	proto.Unmarshal(data, &req)
 
 	switch req.Type {
 	case pb.ProtocolMessage_SIGN_REQUEST:
-		p.processMessageSignRequest(&req, ctx)
+		p.processMessageSignRequest(req.Content, ctx)
 	case pb.ProtocolMessage_SIGN_RESPONSE:
-		p.processMessageSignResponse(&req)
+		p.processMessageSignResponse(req.Content, ctx)
 	}
 
-	//return ic.CreateOkMessage(data)
+	return ic.CreateOkMessage(data)
 
 }
 
-func (p *permissionlessProtocol) processMessageSignRequest(req *pb.ProtocolMessage, ctx processContext) {
-	logger.Debug("Received Sign Request")
+func (p *permissionlessProtocol) processMessageSignRequest(data []byte, ctx ic.P2pContext) {
+	logger.Debug("Received sign Request")
 	reqSign := pb.ClientSignMessage{}
-	err := proto.Unmarshal(req.Content, &reqSign)
+	err := proto.Unmarshal(data, &reqSign)
 
 	if err != nil {
 		logger.Error(err)
@@ -155,7 +158,7 @@ func (p *permissionlessProtocol) processMessageSignRequest(req *pb.ProtocolMessa
 
 	smartContext, closer := p.sc.GetContext(reqSign.SmartContractAddress)
 	defer closer.Close()
-	signInfo := smartContext.InvokeSmartContract(req.Content)
+	signInfo := smartContext.InvokeSmartContract(data)
 	logger.Debugf("SmartContract Execution Result: %v", signInfo)
 
 	if !signInfo.Valid {
@@ -170,28 +173,16 @@ func (p *permissionlessProtocol) processMessageSignRequest(req *pb.ProtocolMessa
 		return
 	}
 
-	resp := pb.SignResponse{
-		UUID:      reqSign.UUID,
-		Signature: sigShare,
-	}
+	respData, err := createSignResponse(reqSign.UUID,sigShare)
 
-	data, err := proto.Marshal(&resp)
-
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	data, err = createProtocolMessage(data, pb.ProtocolMessage_SIGN_RESPONSE)
-
-	ctx.broadcastToGroup(reqSign.KeyId,data)
+	ctx.BroadcastToGroup(reqSign.KeyId, respData)
 }
 
-func (p *permissionlessProtocol) processMessageSignResponse(req *pb.ProtocolMessage) {
-	logger.Debug("Received Sign Response")
+func (p *permissionlessProtocol) processMessageSignResponse(data []byte, ctx ic.P2pContext) {
+	logger.Debug("Received sign Response")
 	signatureMsg := pb.SignResponse{}
 
-	err := proto.Unmarshal(req.Content, &signatureMsg)
+	err := proto.Unmarshal(data, &signatureMsg)
 
 	if err != nil {
 		//discard share with error
@@ -239,7 +230,7 @@ func (p *permissionlessProtocol) processMessageSignResponse(req *pb.ProtocolMess
 	}
 }
 
-func (p *permissionlessProtocol) Sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
+func (p *permissionlessProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
 	logger.Infof("Broadcasting %v", string(data))
 
 	req := pb.ClientSignMessage{}
@@ -283,7 +274,7 @@ func (p *permissionlessProtocol) Sign(data []byte, ctx ic.P2pContext) ic.Handler
 		return ic.CreateErrorMessage(err)
 	}
 
-	err = ctx.BroadcastToGroup(req.KeyId,signReq) //TODO broadcast to the group
+	err = ctx.BroadcastToGroup(req.KeyId,signReq)
 
 	if err != nil {
 		return ic.CreateErrorMessage(err)
@@ -295,7 +286,8 @@ func (p *permissionlessProtocol) Sign(data []byte, ctx ic.P2pContext) ic.Handler
 		return ic.CreateErrorMessage(err)
 	}
 
-	request.AddSigAndCheckIfHaveEnoughShares(sigShare) //TODO concurrency error until now not triggered
+	respData, err := createSignResponse(request.uuid,sigShare)
+	p.interconnect.EmitEvent(ic.NetworkMessage,respData)
 	return <-respChan
 }
 
@@ -337,7 +329,7 @@ func (p *permissionlessProtocol) aggregateShares(req *request) ([]byte,string, e
 	return sig,keyId,err
 }
 
-func (p *permissionlessProtocol) InstallShares(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
+func (p *permissionlessProtocol) installShares(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
 	logger.Info("Installing key share")
 	request := pb.ClientInstallShareRequest{}
 	err := proto.Unmarshal(data,&request)

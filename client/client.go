@@ -12,8 +12,6 @@ import (
 	"net/http"
 )
 
-
-
 func signPermissioned(toSignBytes []byte, smartcontract string, signerAddress string) (pb.ClientSignResponse, error) {
 	return signPermissionless(toSignBytes,smartcontract,signerAddress,"")
 }

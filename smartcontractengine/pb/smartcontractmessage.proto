@@ -31,6 +31,8 @@ message Message {
     // CBOR.
     bytes content = 3;
 
-    string handler_id = 4;
+    string handler_addr = 4;
+
+    string handler_id = 5;
 
 }
