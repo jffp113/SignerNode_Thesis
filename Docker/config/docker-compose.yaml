@@ -1,6 +1,8 @@
 # Variables
-# BOOSTRAP
-# export BOOSTRAP=51.83.75.29
+# BOOTSTRAP
+# export BOOTSTRAP=51.83.75.29
+# export API_PORT=8080
+# export PORT=46431
 
 version: '3.6'
 
@@ -11,12 +13,13 @@ services:
     image: ghcr.io/jffp113/signernode
 #    container_name: signernode-1
     expose:
-      - 8080
+      - ${API_PORT}
       - 9000
+      - 4004
     ports:
-      - "8080:8080"
-      - "46431:46431"
-    command: ./main --peerport=46431 -k ./resources/keys/1/ -b /ip4/${BOOTSTRAP}/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+      - "${API_PORT}:8080"
+      - "${PORT}:${PORT}"
+    command: ./main --peerport=${PORT} -k ./resources/keys/1/ -b /ip4/${BOOTSTRAP}/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
 
 # -------------=== crypto ===-------------
   crypto:
