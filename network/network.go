@@ -37,6 +37,7 @@ type NetConfig struct {
 	BootstrapPeers   []string
 	Port             int
 	Priv             crypto.PrivKey
+	PeerAddress      string
 }
 
 type network struct {
@@ -278,7 +279,7 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 
 	logger.Debug("Creating Peer Host")
 
-	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%v", config.Port)
+	listenAddr := fmt.Sprintf("%v%v",config.PeerAddress ,config.Port)
 	return libp2p.New(
 		context.Background(),
 		libp2p.ListenAddrStrings(listenAddr),

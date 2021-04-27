@@ -52,6 +52,7 @@ type Opts struct {
 	KeyPath       string `short:"k" long:"keys" description:"Path for the private key and public key" default:"./resources/"`
 	Protocol      string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
 	PeerPort      int    `long:"peerport" description:"P2P peer port" default:"0"`
+	PeerAddress   string  `long:"peeraddr" description:"P2P listening address" default:"/ip4/0.0.0.0/tcp/"`
 }
 
 func mainSignerNode() {
@@ -93,6 +94,7 @@ func mainSignerNode() {
 		signermanager.SetSignerURI(opts.SignerURI),
 		signermanager.SetScURI(opts.ScURI),
 		signermanager.SetPeerPort(opts.PeerPort),
+		signermanager.SetPeerAddress(opts.PeerAddress),
 	)
 
 

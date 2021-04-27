@@ -48,6 +48,7 @@ type signermanager struct {
 	scFactory smartcontractengine.SCContextFactory
 	scURI     string
 	peerPort  int
+	peerAddress string
 
 	//Interconnect to talk to a sign manager protocol / verify
 	//and membership
@@ -73,6 +74,7 @@ func (s *signermanager) Init() error {
 	net, err := network.CreateNetwork(s.context, network.NetConfig{
 		BootstrapPeers: []string{s.bootstrapNode},
 		Port:           s.peerPort,
+		PeerAddress: s.peerAddress,
 	})
 	if err != nil {
 		return err

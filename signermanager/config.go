@@ -43,3 +43,10 @@ func SetPeerPort(port int) Config {
 		return nil
 	}
 }
+
+func SetPeerAddress(addr string) Config {
+	return func(m *signermanager) error {
+		m.peerAddress = addr
+		return nil
+	}
+}
