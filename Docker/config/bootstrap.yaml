@@ -1,0 +1,18 @@
+# Bootstrap node advertises in port 55000
+
+version: '3.6'
+
+services:
+
+# -------------=== bootstrap node ===-------------
+
+  bootstrap:
+    image: ghcr.io/jffp113/signernode
+    container_name: bootstrap
+    expose:
+      - 55000
+    ports:
+      - "55000:55000"
+    environment:
+      - IS_BOOTSTRAP=true
+    command: ./main
