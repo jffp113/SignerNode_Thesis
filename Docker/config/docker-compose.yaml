@@ -20,7 +20,7 @@ services:
       - 9000
       - 4004
     network_mode: "host"
-    command: ./main --peerport=${PORT} -s tcp://${IP}:${CRYPTO_PORT} -c tcp://${IP}:${SMARTCONTRACT_PORT} -k ./resources/keys/1/ -b /ip4/${BOOTSTRAP}/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main -p ${API_PORT} --peerport=${PORT} -s tcp://${IP}:${CRYPTO_PORT} -c tcp://${IP}:${SMARTCONTRACT_PORT} -k ./resources/keys/1/ -b /ip4/${BOOTSTRAP}/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
 
 # -------------=== crypto ===-------------
   crypto:
