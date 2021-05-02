@@ -13,6 +13,10 @@ PORT=46000
 CRYPTO_PORT=10000
 SMARTCONTRACT_PORT=11000
 
+T=3
+N=5
+SCHEME=TBLS256Optimistic
+
 #
 #Start up signer node peer nodes
 #------------------------------------------------------------
@@ -38,6 +42,9 @@ do
     export API_PORT=${API_PORT} &&
     export CRYPTO_PORT=${CRYPTO_PORT} &&
     export SMARTCONTRACT_PORT=${SMARTCONTRACT_PORT} &&
+    export T=${T} &&
+    export N=${N} &&
+    export SCHEME=${SCHEME} &&
     docker-compose -p ${ID} -f ${DOCKER_COMPOSE_PATH}/peer.yaml up --detach
     '
   "
