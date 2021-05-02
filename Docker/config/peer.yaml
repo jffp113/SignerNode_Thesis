@@ -36,7 +36,7 @@ services:
   smartcontract:
     image: ghcr.io/jffp113/sawtooth-smartcontract
 #    container_name: smartcontract-1
-    command: intkey-tp-go -vv -C tcp://${IP}:${SMARTCONTRACT_PORT} -s TBLS256Optimistic -t ${T} -n ${N}
+    command: intkey-tp-go -vv -C tcp://${IP}:${SMARTCONTRACT_PORT} -s ${SCHEMES} -t ${T} -n ${N}
     network_mode: "host"
     depends_on:
       - signernode
