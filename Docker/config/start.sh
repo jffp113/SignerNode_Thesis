@@ -4,9 +4,9 @@
 # ----------------------------------------------------
 
 DOCKER_COMPOSE_PATH=/home/jfp/SignerNode_Thesis/Docker/config
-
 BOOTSTRAP=51.83.75.29
 SERVERS=(51.83.75.29 51.83.75.29 51.83.75.29 51.83.75.29 51.83.75.29)
+
 ID=1
 API_PORT=7000
 PORT=46000
@@ -41,7 +41,8 @@ do
     docker-compose -p ${ID} -f ${DOCKER_COMPOSE_PATH}/peer.yaml up --detach
     '
   "
-  echo $CMD | ssh -t jfp@${s} bash
+  (echo $CMD | ssh -t jfp@${s} bash)
+  echo "- \"${s}:${API_PORT}\"" >> peers.txt
 
   ID=$((ID + 1))
   PORT=$((PORT + 1))

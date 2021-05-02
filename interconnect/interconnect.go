@@ -13,7 +13,10 @@ const (
 	EventPoolSize = 100
 
 	//Default Number of Workers
-	WORKERS = 20
+	WORKERS = 100
+	//TODO see how to remove pool dependencies
+	//TODO | We should not be adding more workers to allow the same number of clients
+	//TODO need to remove cyclical dependencies in the pool
 )
 
 //P2pContext defines a P2P network P2pContext used by different
