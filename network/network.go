@@ -24,7 +24,7 @@ var logger = log.Logger("network")
 
 //BufSize defines the max size of message waiting to be processed
 //by a go routine
-const BufSize = 128
+const BufSize = 1024
 
 //NetConfig is used to configure the p2p network
 //gives the possibility to:
@@ -186,7 +186,6 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 	logger.Debug("Setting up Network")
 	h, err := newPeerHost(config)
 	discovery := NewDiscovery(ctx, h, config)
-
 	if err != nil {
 		logger.Error(err)
 		return nil, err
@@ -201,7 +200,9 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 		return nil, err
 	}
 
-	ps, err := pubsub.NewGossipSub(ctx, h, pubsub.WithDiscovery(disc))
+	ps, err := pubsub.NewGossipSub(ctx, h,
+							pubsub.WithDiscovery(disc),
+							pubsub.WithMessageSigning(false))
 
 	topic, err := ps.Join("SignerNodeNetwork")
 
@@ -257,7 +258,6 @@ func (g Group) processIncomingMsg(n *network) {
 		}
 		logger.Debugf("New message arrived from", msg.ReceivedFrom)
 		// only forward messages delivered by others
-
 		if msg.ReceivedFrom == n.self {
 			continue
 		}

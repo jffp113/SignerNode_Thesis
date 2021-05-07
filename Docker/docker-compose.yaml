@@ -50,7 +50,7 @@ services:
       - 9000
     ports:
       - "46432:46432"
-    command: ./main --peerport=46432 -t Byzantine -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46432 -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-3:
@@ -61,7 +61,7 @@ services:
       - 9000
     ports:
       - "46433:46433"
-    command: ./main --peerport=46433 -t Byzantine -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46433  -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
   signernode-4:

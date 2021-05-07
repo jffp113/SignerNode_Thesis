@@ -15,7 +15,7 @@ SMARTCONTRACT_PORT=11000
 
 T=3
 N=5
-SCHEME=TRSA1024Optimistic
+SCHEME=TRSA1024
 
 #
 #Start up signer node peer nodes

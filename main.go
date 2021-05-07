@@ -43,7 +43,6 @@ func mainBootstrap() {
 	select {}
 }
 
-
 type Opts struct {
 	Verbose       []bool `short:"v" long:"verbose" description:"Increase verbosity"`
 	ApiPort       int    `short:"p" long:"port" description:"API Port" default:"8080"`

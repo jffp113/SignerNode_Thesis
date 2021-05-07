@@ -10,6 +10,7 @@ import (
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
 	"sync"
+	"time"
 )
 
 type permissionedProtocol struct {
@@ -197,6 +198,7 @@ func (p *permissionedProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerRe
 		scheme:       signInfo.Scheme,
 		digest:       req.Content,
 		uuid:         req.UUID,
+		submitTime:   time.Now(),
 	}
 
 	p.addRequest(request, req.UUID)
@@ -255,6 +257,23 @@ func NewPermissionedProtocol(crypto crypto.ContextFactory, keychain keychain.Key
 		keychain: keychain,
 		sc:       sc,
 	}
+
+	//toDO DELETE
+	//go func(){
+	//	for {
+	//		time.Sleep(2 * time.Second)
+	//		fmt.Println("Requests waiting:")
+	//		for _,v := range p.requests {
+	//			fmt.Println(v)
+	//			if v.submitTime.Before(time.Now().Add(2*time.Second)){
+	//				p.deleteRequest(v.uuid)
+	//				ic.SendErrorMessage(v.responseChan,errors.New("timeout"))
+	//				fmt.Println("Removing request")
+	//			}
+	//
+	//		}
+	//	}
+	//}()
 
 	return &p
 }

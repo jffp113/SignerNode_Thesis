@@ -3,6 +3,7 @@ module github.com/jffp113/SignerNode_Thesis
 go 1.15
 
 require (
+	github.com/go-ping/ping v0.0.0-20210506233800-ff8be3320020
 	github.com/golang/protobuf v1.4.3
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.0.5
@@ -19,6 +20,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.6.0
-	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+	golang.org/x/net v0.0.0-20210505214959-0714010a04ed
+	golang.org/x/sys v0.0.0-20210507014357-30e306a8bba5 // indirect
 	google.golang.org/protobuf v1.23.0
 )

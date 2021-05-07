@@ -9,7 +9,10 @@ import (
 	"github.com/jffp113/CryptoProviderSDK/keychain"
 	"go.uber.org/atomic"
 	"sync"
+	"time"
 )
+
+
 
 const PERMISSIONED = "Permissioned"
 const PERMISSIONLESS = "Permissionless"
@@ -52,6 +55,7 @@ type request struct {
 	scheme                string
 	uuid                  string
 	digest                []byte
+	submitTime            time.Time
 }
 
 //Will return true when has enough shares at the first time

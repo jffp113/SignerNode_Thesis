@@ -10,7 +10,6 @@ import (
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"go.uber.org/atomic"
-	"math/rand"
 	"net/http"
 	"time"
 )
@@ -42,14 +41,6 @@ func (k *Key) Validate() error{
 	return nil
 }
 
-func (k *Key) GetRandomGroupMember() string{
-	seed := time.Now().UTC().UnixNano()
-	rnd := rand.New(rand.NewSource(seed))
-
-	pos := rnd.Intn(len(k.GroupMembership))
-	return k.GroupMembership[pos]
-}
-
 func (k *Key) GetKeyId() (string,error) {
 	b,err := k.PubKey.MarshalBinary()
 
@@ -77,11 +68,11 @@ func (s permissionlessClient) SendSignRequest(toSignBytes []byte, smartcontract 
 		return pb.ClientSignResponse{},err
 	}
 
-	return signPermissionless(toSignBytes,smartcontract,key.GetRandomGroupMember(),keyId)
+	return signPermissionless(toSignBytes,smartcontract,GetRandomGroupMember(key.GroupMembership),keyId)
 }
 
 func (s permissionlessClient) VerifySignature(digest []byte, sig []byte, scheme string, key *Key) error {
-	return verifySignature(digest,sig,scheme,key.PubKey,key.GetRandomGroupMember())
+	return verifySignature(digest,sig,scheme,key.PubKey,GetRandomGroupMember(key.GroupMembership))
 }
 
 func NewPermissionlessClient() PermissionlessClient {
@@ -93,7 +84,7 @@ func (s permissionlessClient) InstallShare(key *Key) error{
 		return err
 	}
 
-	//membership := getLocalSubsetMembership(s.signerNodeAddress,N)
+	//membership := GetSubsetMembership(s.signerNodeAddress,N)
 	for i,privKeyShare := range key.PrivKeys {
 		err := s.installShare(privKeyShare,key.PubKey,key.ValidUntil,
 			key.IsOneTimeKey,key.GroupMembership[i])
@@ -104,7 +95,6 @@ func (s permissionlessClient) InstallShare(key *Key) error{
 
 	return nil
 }
-
 
 func (s permissionlessClient) installShare(priv crypto.PrivateKey,pub crypto.PublicKey,validUntil time.Time,
 	isOneTimeKey bool, address string) error{
