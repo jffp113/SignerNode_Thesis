@@ -50,8 +50,6 @@ func signPermissionless(toSignBytes []byte, smartcontract string, signerAddress 
 
 	err = proto.Unmarshal(body, &respMsg)
 
-	fmt.Println(resp)
-
 	return respMsg, err
 }
 
