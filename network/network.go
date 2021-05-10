@@ -228,7 +228,10 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 		return nil, err
 	}
 
-	sub, err := topic.Subscribe()
+	sub, err := topic.Subscribe(func(sub *pubsub.Subscription) error {
+		SetUnexportedField(reflect.ValueOf(sub).Elem().FieldByName("ch"),make(chan *pubsub.Message, 128))
+		return nil
+	})
 
 	if err != nil {
 		logger.Error(err)
