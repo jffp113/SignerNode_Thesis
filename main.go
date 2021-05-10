@@ -97,7 +97,6 @@ func mainSignerNode() {
 		signermanager.SetPeerAddress(opts.PeerAddress),
 	)
 
-
 	//Initiate signermanager
 	err = sm.Init()
 

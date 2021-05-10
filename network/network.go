@@ -16,8 +16,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"go.uber.org/atomic"
+	"reflect"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 var logger = log.Logger("network")
@@ -135,7 +137,15 @@ func (n *network) JoinGroup(groupId string) error {
 		return err
 	}
 
-	sub, err := topic.Subscribe()
+	sub, err := topic.Subscribe(func(sub *pubsub.Subscription) error {
+		//What I'm doing here is a a bit crepy.
+		//However the LIBP2P API does not allow me to set the size of the "buffer" chan for publishing messages
+		//which in my case is bad. I produce a lot of messages when clients grow.
+		//Now the size of the topic channel is 128 instead of 32. Enough for a commodity machine being able to run
+		//5 signer nodes with 100 concurrent clients.
+		SetUnexportedField(reflect.ValueOf(sub).Elem().FieldByName("ch"),make(chan *pubsub.Message, 128))
+		return nil
+	})
 
 	if err != nil {
 		return err
@@ -155,6 +165,12 @@ func (n *network) JoinGroup(groupId string) error {
 	go g.processIncomingMsg(n)
 
 	return nil
+}
+
+func SetUnexportedField(field reflect.Value, value interface{}) {
+	reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).
+		Elem().
+		Set(reflect.ValueOf(value))
 }
 
 func (n *network) LeaveGroup(groupId string) error {
@@ -202,7 +218,8 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 
 	ps, err := pubsub.NewGossipSub(ctx, h,
 							pubsub.WithDiscovery(disc),
-							pubsub.WithMessageSigning(false))
+							pubsub.WithMessageSigning(false), //no need for signing
+							pubsub.WithPeerOutboundQueueSize(1024)) //Bigger outbound pool
 
 	topic, err := ps.Join("SignerNodeNetwork")
 
