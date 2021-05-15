@@ -1,10 +1,10 @@
 package smartcontractengine
 
 import (
-	"github.com/jffp113/SignerNode_Thesis/messaging"
-	"github.com/jffp113/SignerNode_Thesis/smartcontractengine/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-log"
+	"github.com/jffp113/SignerNode_Thesis/messaging"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine/pb"
 	zmq "github.com/pebbe/zmq4"
 	"io"
 )
@@ -42,7 +42,7 @@ func (c *context) InvokeSmartContract(payload []byte) ScResponse {
 
 	handlerAddress := c.client.handlers[c.scID]
 
-	msg, _, _ := pb.CreateHandlerMessage(pb.Message_SMART_CONTRACT_VALIDATE_REQUEST, &req, handlerAddress,c.scID)
+	msg, _, _ := pb.CreateHandlerMessage(pb.Message_SMART_CONTRACT_VALIDATE_REQUEST, &req, handlerAddress, c.scID)
 
 	reply, err := c.sendHandlerMessageAndReceiveResponse(msg)
 
@@ -164,7 +164,7 @@ func (c *scClient) processNewHandlers() {
 		rep := pb.SmartContractRegisterResponse{Status: pb.SmartContractRegisterResponse_OK}
 
 		handlerMsg, _, err := pb.CreateMessageWithCorrelationId(pb.Message_SMART_CONTRACT_REGISTER_RESPONSE,
-			&rep, newMsg.CorrelationId,newMsg.HandlerAddr,newMsg.HandlerId)
+			&rep, newMsg.CorrelationId, newMsg.HandlerAddr, newMsg.HandlerId)
 
 		if err != nil {
 			logger.Warnf("Error Ignoring register handler MSG: %v", err)

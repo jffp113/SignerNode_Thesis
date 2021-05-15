@@ -20,7 +20,7 @@ func generateRandomNumber(start int, end int, count int) []int {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for len(nums) < count {
 		// generate random number
-		num := r.Intn(end - start) + start
+		num := r.Intn(end-start) + start
 		// duplicate check
 		exist := false
 		for _, v := range nums {
@@ -36,18 +36,17 @@ func generateRandomNumber(start int, end int, count int) []int {
 	return nums
 }
 
-func GetSubsetMembership(hosts []string,n int) []string{
-	positionsToSelect := generateRandomNumber(0,len(hosts),n)
+func GetSubsetMembership(hosts []string, n int) []string {
+	positionsToSelect := generateRandomNumber(0, len(hosts), n)
 
-	result := make([]string,0,n)
+	result := make([]string, 0, n)
 
-	for _,v := range positionsToSelect {
-		result = append(result,hosts[v])
+	for _, v := range positionsToSelect {
+		result = append(result, hosts[v])
 	}
 
 	return result
 }
-
 
 func GetRandomGroupMember(GroupMembership []string) string {
 	seed := time.Now().UTC().UnixNano()
@@ -57,7 +56,7 @@ func GetRandomGroupMember(GroupMembership []string) string {
 	return GroupMembership[pos]
 }
 
-func GetNNodesRandomly(signernodes []string, n int) []string{
+func GetNNodesRandomly(signernodes []string, n int) []string {
 	var result []string
 	alreadyChoosen := make(map[int]bool)
 	rnd := rand.New(rand.NewSource(time.Now().Unix()))
@@ -70,20 +69,19 @@ func GetNNodesRandomly(signernodes []string, n int) []string{
 		}
 		alreadyChoosen[pos] = true
 		elm := signernodes[pos]
-		result = append(result,elm)
+		result = append(result, elm)
 		i++
 	}
 
 	return result
 }
 
-
 type RTT struct {
-	rtt time.Duration
+	rtt     time.Duration
 	address string
 }
 
-func  GetNNearestNodes(signernodes []string, n int) []string {
+func GetNNearestNodes(signernodes []string, n int) []string {
 	var rtts []RTT
 
 	if len(signernodes) < n {
@@ -91,7 +89,7 @@ func  GetNNearestNodes(signernodes []string, n int) []string {
 	}
 
 	for i := range signernodes {
-		addr := strings.Split(signernodes[i],":")
+		addr := strings.Split(signernodes[i], ":")
 		pinger, err := ping.NewPinger(addr[0])
 
 		if err != nil {
@@ -102,7 +100,7 @@ func  GetNNearestNodes(signernodes []string, n int) []string {
 		pinger.Run()
 		stats := pinger.Statistics()
 
-		rtts = insertOrder(rtts,RTT{
+		rtts = insertOrder(rtts, RTT{
 			rtt:     stats.AvgRtt,
 			address: signernodes[i],
 		})
@@ -112,21 +110,21 @@ func  GetNNearestNodes(signernodes []string, n int) []string {
 		return []string{}
 	}
 
-	result := make([]string,0,n)
-	for i := range rtts{
-		result = append(result,rtts[i].address)
+	result := make([]string, 0, n)
+	for i := range rtts {
+		result = append(result, rtts[i].address)
 	}
 
 	return result[:n]
 }
 
-func insertOrder(rtts []RTT,v RTT) []RTT{
+func insertOrder(rtts []RTT, v RTT) []RTT {
 	for i := range rtts {
-		if rtts[i].rtt > v.rtt{
-			rtts = append(rtts[:i + 1],rtts[i:]...)
+		if rtts[i].rtt > v.rtt {
+			rtts = append(rtts[:i+1], rtts[i:]...)
 			rtts[i] = v
 			return rtts
 		}
 	}
-	return append(rtts,v)
+	return append(rtts, v)
 }

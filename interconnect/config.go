@@ -1,6 +1,5 @@
 package interconnect
 
-
 type Config func(m *interconnect) error
 
 func SetNumberOfHandlerWorkers(nWorkers int) Config {

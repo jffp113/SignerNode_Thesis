@@ -1,11 +1,11 @@
 package signermanager
 
 import (
-	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 )
 
 func createProtocolMessage(msg []byte, messageType pb.ProtocolMessage_Type) ([]byte, error) {

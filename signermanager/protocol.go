@@ -1,37 +1,32 @@
 package signermanager
 
 import (
-	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
-	"github.com/jffp113/SignerNode_Thesis/network"
-	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"errors"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
+	"github.com/jffp113/SignerNode_Thesis/network"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"go.uber.org/atomic"
 	"sync"
 	"time"
 )
-
-
 
 const PERMISSIONED = "Permissioned"
 const PERMISSIONLESS = "Permissionless"
 const BYZANTINE = "Byzantine"
 
 type Protocol interface {
-	//ProcessMessage(data []byte, ctx processContext)
-	//sign(data []byte, ctx signContext)
-	//installShares(data []byte) error
 	Register(ic ic.Interconnect) error
 }
 
 func GetProtocol(protocolName string, factory crypto.ContextFactory,
-	keychain keychain.KeyChain, scFactory smartcontractengine.SCContextFactory,network network.Network) (Protocol, error) {
+	keychain keychain.KeyChain, scFactory smartcontractengine.SCContextFactory, network network.Network, broadcastAnswer bool) (Protocol, error) {
 	switch protocolName {
 	case PERMISSIONED:
-		return NewPermissionedProtocol(factory, keychain, scFactory), nil
+		return NewPermissionedProtocol(factory, keychain, scFactory, broadcastAnswer), nil
 	case PERMISSIONLESS:
-		return NewPermissionlessProtocol(factory,scFactory,network),nil
+		return NewPermissionlessProtocol(factory, scFactory, network,broadcastAnswer), nil
 	case BYZANTINE:
 		return NewByzantineProtocol(), nil
 	default:

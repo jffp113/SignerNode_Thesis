@@ -26,7 +26,10 @@ type P2pContext struct {
 	Broadcast func(msg []byte) error
 
 	//BroadcastToGroup only broadcast to a specific group.
-	BroadcastToGroup func(groupId string ,msg []byte) error
+	BroadcastToGroup func(groupId string, msg []byte) error
+
+	//Send sends a message to a specific destination (to)
+	Send func(msg []byte, to string) error
 
 	//JoinGroup joins group can create a group over a P2P network.
 	JoinGroup func(groupId string) error
@@ -35,13 +38,47 @@ type P2pContext struct {
 	LeaveGroup func(groupId string) error
 }
 
-//Handler defines the type of a interconnect event
-type Handler func(content []byte, ctx P2pContext) HandlerResponse
+//ICMessage defines a message that flows in the interconnect
+//component. A message can have a destination (To) and a src (From)
+//However if the components don't need, they can simply return empty string.
+type ICMessage interface {
+	GetFrom() string
+	GetTo() string
+	GetData() []byte
+}
 
+type internalMessage struct {
+	from    string
+	to      string
+	content []byte
+}
+
+func (r *internalMessage) GetFrom() string {
+	return r.from
+}
+
+func (r *internalMessage) GetTo() string {
+	return r.to
+}
+
+func (r *internalMessage) GetData() []byte {
+	return r.content
+}
+
+func NewMessageFromBytes(data []byte) ICMessage {
+	return &internalMessage{
+		from:    "",
+		to:      "",
+		content: data,
+	}
+}
+
+//Handler defines the type of a interconnect event
+type Handler func(content ICMessage, ctx P2pContext) HandlerResponse
 
 type Interconnect interface {
 	RegisterHandler(t HandlerType, handler Handler)
-	EmitEvent(t HandlerType, content []byte) HandlerResponse
+	EmitEvent(t HandlerType, content ICMessage) HandlerResponse
 }
 
 //interconnect defines a event base system.
@@ -72,7 +109,7 @@ type event struct {
 	handlerType HandlerType
 
 	//content to be used by a handler
-	content []byte
+	content ICMessage
 
 	//respChan is used by a handler worker to send
 	//the final response produced by the handlers
@@ -80,37 +117,35 @@ type event struct {
 }
 
 //NewInterconnect creates a new interconnect using configurations.
-func NewInterconnect(configs ...Config) (*interconnect,error){
+func NewInterconnect(configs ...Config) (*interconnect, error) {
 	ic := interconnect{
 		handlers:  make(map[HandlerType][]Handler),
-		eventChan: make(chan event,EventPoolSize),
+		eventChan: make(chan event, EventPoolSize),
 		nWorkers:  WORKERS,
 		cancel:    func() {},
 	}
 
 	//process every given configuration
-	for _,conf := range configs {
+	for _, conf := range configs {
 		err := conf(&ic)
 		if err != nil {
-			return &ic,err
+			return &ic, err
 		}
 	}
 
-
 	//create a context to terminate workers
-	ctx,cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	ic.cancel = cancel
 
 	//initialize different handler workers
-	for i := 0 ; i < ic.nWorkers; i++ {
-		go handlerWorker(&ic,ctx)
+	for i := 0; i < ic.nWorkers; i++ {
+		go handlerWorker(&ic, ctx)
 	}
 
-
-	return &ic,nil
+	return &ic, nil
 }
 
-func (ic *interconnect) Done(){
+func (ic *interconnect) Done() {
 	ic.cancel()
 }
 
@@ -118,27 +153,31 @@ func (ic *interconnect) Done(){
 func handlerWorker(ic *interconnect, ctx context.Context) {
 	for {
 		select {
-			case <-ctx.Done():
-				logger.Info("Terminating handler worker")
-				return
-			case event := <- ic.eventChan:
-				handlers := ic.handlers[event.handlerType]
-				event.respChan <- processEvent(handlers,event.content,ic.p2pCtx)
+		case <-ctx.Done():
+			logger.Info("Terminating handler worker")
+			return
+		case event := <-ic.eventChan:
+			handlers := ic.handlers[event.handlerType]
+			event.respChan <- processEvent(handlers, event.content, ic.p2pCtx)
 		}
 	}
 }
 
 //processEvent processes a event using all the available handlers to a HandlerType
-func processEvent(handlers []Handler, content []byte, ctx P2pContext) HandlerResponse{
+func processEvent(handlers []Handler, content ICMessage, ctx P2pContext) HandlerResponse {
 	var resp HandlerResponse
 
 	if len(handlers) == 0 {
 		return CreateErrorMessage(errors.New("no handlers available to process request"))
 	}
 
-	for _,handler := range handlers{
-		resp = handler(content,ctx)
-		content = resp.ResponseData
+	for _, handler := range handlers {
+		resp = handler(content, ctx)
+		content = &internalMessage{
+			content.GetFrom(),
+			content.GetTo(),
+			resp.ResponseData,
+		}
 	}
 	return resp
 }
@@ -151,17 +190,12 @@ func processEvent(handlers []Handler, content []byte, ctx P2pContext) HandlerRes
 //RegisterHandler is not reentrant. In presence of concurrency it is
 //necessary to synchronize.
 func (i *interconnect) RegisterHandler(t HandlerType, handler Handler) {
-	i.handlers[t] = append(i.handlers[t],handler)
+	i.handlers[t] = append(i.handlers[t], handler)
 }
-
 
 //EmitEvent emits events to be processed by a Handler
-func (i *interconnect) EmitEvent(t HandlerType, content []byte) HandlerResponse{
+func (i *interconnect) EmitEvent(t HandlerType, content ICMessage) HandlerResponse {
 	respChan := make(chan HandlerResponse)
-	i.eventChan<-event{t,content,respChan}
+	i.eventChan <- event{t, content, respChan}
 	return <-respChan
 }
-
-
-
-

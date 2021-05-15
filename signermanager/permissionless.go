@@ -1,14 +1,14 @@
 package signermanager
 
 import (
-	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
-	"github.com/jffp113/SignerNode_Thesis/network"
-	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
-	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
+	"github.com/jffp113/SignerNode_Thesis/network"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"sync"
 	"time"
 )
@@ -19,7 +19,7 @@ type permissionlessProtocol struct {
 	requestsLock sync.Mutex //TODO see if sync.map is better for lock contention
 	requests     map[string]*request
 
-	installedKeys     sync.Map//map[string]*keyInfo
+	installedKeys sync.Map //map[string]*keyInfo
 
 	requestToKeyLock sync.RWMutex
 	requestToKey     map[string]string
@@ -28,18 +28,17 @@ type permissionlessProtocol struct {
 	sc      smartcontractengine.SCContextFactory
 	network network.Network
 
-	interconnect ic.Interconnect
+	interconnect    ic.Interconnect
+	broadcastAnswer bool
 }
 
-
 func (p *permissionlessProtocol) Register(interconnect ic.Interconnect) error {
-	interconnect.RegisterHandler(ic.SignClientRequest,p.sign)
-	interconnect.RegisterHandler(ic.InstallClientRequest,p.installShares)
-	interconnect.RegisterHandler(ic.NetworkMessage,p.processMessage)
+	interconnect.RegisterHandler(ic.SignClientRequest, p.sign)
+	interconnect.RegisterHandler(ic.InstallClientRequest, p.installShares)
+	interconnect.RegisterHandler(ic.NetworkMessage, p.processMessage)
 	p.interconnect = interconnect
 	return nil
 }
-
 
 type keyInfo struct {
 	privShare    crypto.PrivateKey
@@ -50,9 +49,9 @@ type keyInfo struct {
 }
 
 func (k keyInfo) expired() bool {
-	if k.used && k.isOneTimeKey{
+	if k.used && k.isOneTimeKey {
 		return true
-	} else if  k.validUntil.Before(time.Now().Add(TimeSlack)) {
+	} else if k.validUntil.Before(time.Now().Add(TimeSlack)) {
 		return true
 	}
 	return false
@@ -93,12 +92,12 @@ func (p *permissionlessProtocol) deleteRequestToKey(requestUUID string) {
 }
 
 func (p *permissionlessProtocol) addInstalledKey(keyID string, info *keyInfo) {
-	p.installedKeys.Store(keyID,info)
+	p.installedKeys.Store(keyID, info)
 }
 
 func (p *permissionlessProtocol) getInstalledKey(keyId string) (*keyInfo, bool) {
-	v,ok := p.installedKeys.Load(keyId)
-	return  v.(*keyInfo), ok
+	v, ok := p.installedKeys.Load(keyId)
+	return v.(*keyInfo), ok
 }
 
 func (p *permissionlessProtocol) deleteInstalledKey(keyId string) {
@@ -129,24 +128,24 @@ func (r *permissionlessProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid s
 	return v, false
 }
 
-func (p *permissionlessProtocol) processMessage(data []byte, ctx ic.P2pContext) ic.HandlerResponse{
+func (p *permissionlessProtocol) processMessage(msg ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
 	logger.Debug("Received sign Request, processing.")
 
 	req := pb.ProtocolMessage{}
-	proto.Unmarshal(data, &req)
+	proto.Unmarshal(msg.GetData(), &req)
 
 	switch req.Type {
 	case pb.ProtocolMessage_SIGN_REQUEST:
-		p.processMessageSignRequest(req.Content, ctx)
+		p.processMessageSignRequest(req.Content,msg.GetFrom(),ctx)
 	case pb.ProtocolMessage_SIGN_RESPONSE:
 		p.processMessageSignResponse(req.Content, ctx)
 	}
 
-	return ic.CreateOkMessage(data)
+	return ic.CreateOkMessage(msg.GetData())
 
 }
 
-func (p *permissionlessProtocol) processMessageSignRequest(data []byte, ctx ic.P2pContext) {
+func (p *permissionlessProtocol) processMessageSignRequest(data []byte, from string ,ctx ic.P2pContext) {
 	logger.Debug("Received sign Request")
 	reqSign := pb.ClientSignMessage{}
 	err := proto.Unmarshal(data, &reqSign)
@@ -173,9 +172,13 @@ func (p *permissionlessProtocol) processMessageSignRequest(data []byte, ctx ic.P
 		return
 	}
 
-	respData, err := createSignResponse(reqSign.UUID,sigShare)
+	respData, err := createSignResponse(reqSign.UUID, sigShare)
 
-	ctx.BroadcastToGroup(reqSign.KeyId, respData)
+	if p.broadcastAnswer{
+		ctx.BroadcastToGroup(reqSign.KeyId, respData)
+	} else {
+		ctx.Send(respData,from)
+	}
 }
 
 func (p *permissionlessProtocol) processMessageSignResponse(data []byte, ctx ic.P2pContext) {
@@ -207,7 +210,7 @@ func (p *permissionlessProtocol) processMessageSignResponse(data []byte, ctx ic.
 			logger.Debugf("Aggregating request %v", v)
 
 			firstExec = false
-			fullSig,keyId, err := p.aggregateShares(v)
+			fullSig, keyId, err := p.aggregateShares(v)
 
 			if err != nil {
 				//sendErrorMessage(v.responseChan, err)
@@ -230,11 +233,11 @@ func (p *permissionlessProtocol) processMessageSignResponse(data []byte, ctx ic.
 	}
 }
 
-func (p *permissionlessProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
-	logger.Infof("Broadcasting %v", string(data))
+func (p *permissionlessProtocol) sign(msg ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
+	logger.Infof("Broadcasting %v", string(msg.GetData()))
 
 	req := pb.ClientSignMessage{}
-	err := proto.Unmarshal(data, &req)
+	err := proto.Unmarshal(msg.GetData(), &req)
 
 	if err != nil {
 		return ic.CreateErrorMessage(err)
@@ -253,7 +256,7 @@ func (p *permissionlessProtocol) sign(data []byte, ctx ic.P2pContext) ic.Handler
 		return ic.CreateInvalidTransactionMessage()
 	}
 
-	respChan := make(chan ic.HandlerResponse,1)
+	respChan := make(chan ic.HandlerResponse, 1)
 	request := &request{
 		responseChan: respChan,
 		shares:       make([][]byte, 0),
@@ -268,13 +271,13 @@ func (p *permissionlessProtocol) sign(data []byte, ctx ic.P2pContext) ic.Handler
 	p.addRequest(request, req.UUID)
 	p.addNewRequestToKey(req.UUID, req.KeyId) //TODO memory leak
 
-	signReq, err := createProtocolMessage(data, pb.ProtocolMessage_SIGN_REQUEST)
+	signReq, err := createProtocolMessage(msg.GetData(), pb.ProtocolMessage_SIGN_REQUEST)
 
 	if err != nil {
 		return ic.CreateErrorMessage(err)
 	}
 
-	err = ctx.BroadcastToGroup(req.KeyId,signReq)
+	err = ctx.BroadcastToGroup(req.KeyId, signReq)
 
 	if err != nil {
 		return ic.CreateErrorMessage(err)
@@ -286,8 +289,8 @@ func (p *permissionlessProtocol) sign(data []byte, ctx ic.P2pContext) ic.Handler
 		return ic.CreateErrorMessage(err)
 	}
 
-	respData, err := createSignResponse(request.uuid,sigShare)
-	p.interconnect.EmitEvent(ic.NetworkMessage,respData)
+	respData, err := createSignResponse(request.uuid, sigShare)
+	p.interconnect.EmitEvent(ic.NetworkMessage, ic.NewMessageFromBytes(respData))
 	return <-respChan
 }
 
@@ -302,37 +305,36 @@ func (p *permissionlessProtocol) signWithShare(req *pb.ClientSignMessage, scheme
 		return nil, errors.New("key expired")
 	}
 
-
 	sig, err := signWithShare(req.Content, key.privShare, p.crypto, scheme, n, t)
 
 	if err == nil {
 		key.used = true
 	}
 
-	return sig,err
+	return sig, err
 }
 
-func (p *permissionlessProtocol) aggregateShares(req *request) ([]byte,string, error) {
-	keyId,ok := p.getRequestKeyId(req.uuid)
+func (p *permissionlessProtocol) aggregateShares(req *request) ([]byte, string, error) {
+	keyId, ok := p.getRequestKeyId(req.uuid)
 
 	if !ok {
-		return nil,keyId, errors.New("no key set request")
+		return nil, keyId, errors.New("no key set request")
 	}
 
 	keyInfo, ok := p.getInstalledKey(keyId)
 
 	if !ok {
 		p.deleteRequestToKey(keyId)
-		return nil,keyId, errors.New("key does not exist or expired")
+		return nil, keyId, errors.New("key does not exist or expired")
 	}
-	sig,err := aggregateShares(req, keyInfo.pubKey, p.crypto)
-	return sig,keyId,err
+	sig, err := aggregateShares(req, keyInfo.pubKey, p.crypto)
+	return sig, keyId, err
 }
 
-func (p *permissionlessProtocol) installShares(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
+func (p *permissionlessProtocol) installShares(msg ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
 	logger.Info("Installing key share")
 	request := pb.ClientInstallShareRequest{}
-	err := proto.Unmarshal(data,&request)
+	err := proto.Unmarshal(msg.GetData(), &request)
 
 	if err != nil {
 		return ic.CreateErrorMessage(err)
@@ -349,11 +351,11 @@ func (p *permissionlessProtocol) installShares(data []byte, ctx ic.P2pContext) i
 	k := keyInfo{
 		privShare:    keychain.ConvertBytesToPrivKey(request.PrivateKey),
 		pubKey:       keychain.ConvertBytesToPubKey(request.PublicKey),
-		validUntil:   time.Unix(request.ValidUntil,0),
+		validUntil:   time.Unix(request.ValidUntil, 0),
 		isOneTimeKey: false,
 	}
-	
-	p.addInstalledKey(keyId,&k)
+
+	p.addInstalledKey(keyId, &k)
 
 	return ic.CreateOkMessage([]byte{})
 }
@@ -368,31 +370,33 @@ func (p *permissionlessProtocol) ShareGarbageCollector() {
 	p.installedKeys.Range(func(key, value interface{}) bool {
 		keyInfo := value.(*keyInfo)
 
-		if keyInfo.expired(){
+		if keyInfo.expired() {
 			appendToDelete(key)
 		}
 
 		return true
 	})
 
-	for _,v := range toDeleteKeys {
+	for _, v := range toDeleteKeys {
 		p.network.LeaveGroup(v)
 		p.deleteInstalledKey(v)
 	}
 
 }
 
-func NewPermissionlessProtocol(crypto crypto.ContextFactory, sc smartcontractengine.SCContextFactory, network network.Network) Protocol {
+func NewPermissionlessProtocol(crypto crypto.ContextFactory, sc smartcontractengine.SCContextFactory,
+	network network.Network, broadcastAnswer bool) Protocol {
 
 	p := permissionlessProtocol{
-		requestsLock:      sync.Mutex{},
-		requests:          make(map[string]*request),
-		installedKeys:     sync.Map{},//make(map[string]*keyInfo),
-		requestToKeyLock:  sync.RWMutex{},
-		requestToKey:      make(map[string]string),
-		crypto:            crypto,
-		sc:                sc,
-		network: network,
+		requestsLock:     sync.Mutex{},
+		requests:         make(map[string]*request),
+		installedKeys:    sync.Map{}, //make(map[string]*keyInfo),
+		requestToKeyLock: sync.RWMutex{},
+		requestToKey:     make(map[string]string),
+		crypto:           crypto,
+		sc:               sc,
+		network:          network,
+		broadcastAnswer: broadcastAnswer,
 	}
 
 	return &p

@@ -12,6 +12,18 @@ type networkMessage struct {
 	Content []byte
 }
 
+func (msg *networkMessage) GetFrom() string {
+	return string(msg.From)
+}
+
+func (msg *networkMessage) GetTo() string {
+	return string(msg.To)
+}
+
+func (msg *networkMessage) GetData() []byte {
+	return msg.Content
+}
+
 func (msg *networkMessage) MarshalBinary() (data []byte, err error) {
 	p := pb.NetworkMessage{}
 	p.From, err = msg.From.Marshal()

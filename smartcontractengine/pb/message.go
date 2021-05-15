@@ -25,7 +25,7 @@ func CreateSignMessageWithCorrelationId(msgType Message_MessageType, data []byte
 	return b, corrId, err
 }
 
-func CreateMessageWithCorrelationId(msgType Message_MessageType, data proto.Message, corrId string,  handlerAddress string,handlerId string) (*Message, string, error) {
+func CreateMessageWithCorrelationId(msgType Message_MessageType, data proto.Message, corrId string, handlerAddress string, handlerId string) (*Message, string, error) {
 	bytes, err := proto.Marshal(data)
 
 	if err != nil {
@@ -37,13 +37,13 @@ func CreateMessageWithCorrelationId(msgType Message_MessageType, data proto.Mess
 		CorrelationId: corrId,
 		Content:       bytes,
 		HandlerId:     handlerId,
-		HandlerAddr: handlerAddress,
+		HandlerAddr:   handlerAddress,
 	}
 	return &hd, corrId, nil
 }
 
-func CreateHandlerMessage(msgType Message_MessageType, data proto.Message, handlerAddress string,handlerId string) (*Message, string, error) {
-	return CreateMessageWithCorrelationId(msgType, data, GenerateId(), handlerAddress,handlerId)
+func CreateHandlerMessage(msgType Message_MessageType, data proto.Message, handlerAddress string, handlerId string) (*Message, string, error) {
+	return CreateMessageWithCorrelationId(msgType, data, GenerateId(), handlerAddress, handlerId)
 }
 
 func UnmarshallSignMessage(data []byte) (*Message, error) {

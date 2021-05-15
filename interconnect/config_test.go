@@ -11,10 +11,10 @@ func TestSetNumberOfHandlerWorkers(t *testing.T) {
 		eventChan: nil,
 		nWorkers:  0,
 	}
-	assert.Equal(t,0,ic.nWorkers)
+	assert.Equal(t, 0, ic.nWorkers)
 	err := SetNumberOfHandlerWorkers(10)(&ic)
-	assert.Nil(t,err)
-	assert.Equal(t,10,ic.nWorkers)
+	assert.Nil(t, err)
+	assert.Equal(t, 10, ic.nWorkers)
 }
 
 func TestSetContext(t *testing.T) {
@@ -23,10 +23,10 @@ func TestSetContext(t *testing.T) {
 		eventChan: nil,
 		nWorkers:  0,
 	}
-	assert.Nil(t,ic.p2pCtx.Broadcast)
+	assert.Nil(t, ic.p2pCtx.Broadcast)
 	err := SetContext(P2pContext{
-		Broadcast: func(msg []byte) error {return nil},
+		Broadcast: func(msg []byte) error { return nil },
 	})(&ic)
-	assert.Nil(t,err)
-	assert.NotNil(t,ic.p2pCtx.Broadcast)
+	assert.Nil(t, err)
+	assert.NotNil(t, ic.p2pCtx.Broadcast)
 }

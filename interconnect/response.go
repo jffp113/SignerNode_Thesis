@@ -16,7 +16,7 @@ type HandlerResponse struct {
 	Err            error
 }
 
-func CreateErrorMessage(err error) HandlerResponse{
+func CreateErrorMessage(err error) HandlerResponse {
 	logger.Error(err)
 	return HandlerResponse{
 		ResponseStatus: Error,
@@ -24,14 +24,14 @@ func CreateErrorMessage(err error) HandlerResponse{
 	}
 }
 
-func CreateInvalidTransactionMessage() HandlerResponse{
+func CreateInvalidTransactionMessage() HandlerResponse {
 	return HandlerResponse{
 		ResponseStatus: InvalidTransaction,
 		Err:            nil,
 	}
 }
 
-func CreateOkMessage(data []byte) HandlerResponse{
+func CreateOkMessage(data []byte) HandlerResponse {
 	return HandlerResponse{
 		ResponseStatus: Ok,
 		ResponseData:   data,

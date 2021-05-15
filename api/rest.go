@@ -1,9 +1,9 @@
 package api
 
 import (
-	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"fmt"
 	"github.com/ipfs/go-log"
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"io/ioutil"
 	"net/http"
 )
@@ -26,7 +26,6 @@ func httpFuncHandler(w http.ResponseWriter, r *http.Request,
 		b, _ := ioutil.ReadAll(r.Body)
 
 		resp := f(b)
-
 		switch resp.ResponseStatus {
 		case ic.Ok:
 			logger.Debug("Execution Ok")
@@ -45,31 +44,30 @@ func httpFuncHandler(w http.ResponseWriter, r *http.Request,
 	}
 }
 
-func initHttp(port int, emitEvent EmitFunc, handleFuncRegister HandleFunc){
+func initHttp(port int, emitEvent EmitFunc, handleFuncRegister HandleFunc) {
 	handleFuncRegister("/sign", func(writer http.ResponseWriter, request *http.Request) {
 		httpPostHandler(writer, request, func(data []byte) ic.HandlerResponse {
-			return emitEvent(ic.SignClientRequest,data)
+			return emitEvent(ic.SignClientRequest, data)
 		})
 	})
 
 	handleFuncRegister("/verify", func(writer http.ResponseWriter, request *http.Request) {
 		httpPostHandler(writer, request, func(data []byte) ic.HandlerResponse {
-			return emitEvent(ic.VerifyClientRequest,data)
+			return emitEvent(ic.VerifyClientRequest, data)
 		})
 	})
 
 	handleFuncRegister("/install", func(writer http.ResponseWriter, request *http.Request) {
 		httpPostHandler(writer, request, func(data []byte) ic.HandlerResponse {
-			return emitEvent(ic.InstallClientRequest,data)
+			return emitEvent(ic.InstallClientRequest, data)
 		})
 	})
 
 	handleFuncRegister("/membership", func(writer http.ResponseWriter, request *http.Request) {
 		httpGetHandler(writer, request, func(data []byte) ic.HandlerResponse {
-			return emitEvent(ic.MembershipClientRequest,data)
+			return emitEvent(ic.MembershipClientRequest, data)
 		})
 	})
-
 
 }
 
@@ -77,6 +75,6 @@ type EmitFunc func(t ic.HandlerType, content []byte) ic.HandlerResponse
 type HandleFunc func(pattern string, handler func(http.ResponseWriter, *http.Request))
 
 func Init(port int, emitEvent EmitFunc) {
-	initHttp(port,emitEvent,http.HandleFunc)
+	initHttp(port, emitEvent, http.HandleFunc)
 	logger.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }

@@ -13,16 +13,16 @@ import (
 )
 
 func signPermissioned(toSignBytes []byte, smartcontract string, signerAddress string) (pb.ClientSignResponse, error) {
-	return signPermissionless(toSignBytes,smartcontract,signerAddress,"")
+	return signPermissionless(toSignBytes, smartcontract, signerAddress, "")
 }
 
-func signPermissionless(toSignBytes []byte, smartcontract string, signerAddress string,keyId string) (pb.ClientSignResponse, error) {
+func signPermissionless(toSignBytes []byte, smartcontract string, signerAddress string, keyId string) (pb.ClientSignResponse, error) {
 	uuid := fmt.Sprint(uuid.NewV4())
 	msg := pb.ClientSignMessage{
 		UUID:                 fmt.Sprint(uuid),
 		Content:              toSignBytes,
 		SmartContractAddress: smartcontract,
-		KeyId: keyId,
+		KeyId:                keyId,
 	}
 
 	b, err := proto.Marshal(&msg)
@@ -36,7 +36,7 @@ func signPermissionless(toSignBytes []byte, smartcontract string, signerAddress 
 		return pb.ClientSignResponse{}, err
 	}
 
-	if resp.StatusCode == 500{
+	if resp.StatusCode == 500 {
 		return pb.ClientSignResponse{}, errors.New("signer node did not sign")
 	}
 

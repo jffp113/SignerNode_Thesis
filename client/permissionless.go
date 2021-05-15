@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-
 //Key is a struct that aggregates everything
 //related to a installed key
 //The user of this API should keep it to ask
@@ -30,22 +29,22 @@ type Key struct {
 	GroupMembership []string
 }
 
-func (k *Key) Validate() error{
+func (k *Key) Validate() error {
 	if k.T > k.N {
 		return errors.New("T can not be higher than N")
 	} else if len(k.GroupMembership) != k.N {
-		return errors.New(fmt.Sprintf("group membership should have size %v",k.N))
+		return errors.New(fmt.Sprintf("group membership should have size %v", k.N))
 	} else if len(k.PrivKeys) != k.N {
-		return errors.New(fmt.Sprintf("priv keys should contain %v keys",k.N))
+		return errors.New(fmt.Sprintf("priv keys should contain %v keys", k.N))
 	}
 	return nil
 }
 
-func (k *Key) GetKeyId() (string,error) {
-	b,err := k.PubKey.MarshalBinary()
+func (k *Key) GetKeyId() (string, error) {
+	b, err := k.PubKey.MarshalBinary()
 
 	if err != nil {
-		return "",err
+		return "", err
 	}
 
 	h := sha256.New()
@@ -55,39 +54,39 @@ func (k *Key) GetKeyId() (string,error) {
 }
 
 type PermissionlessClient interface {
-	SendSignRequest(toSignBytes []byte, smartcontract string,key *Key) (pb.ClientSignResponse, error)
-	VerifySignature(digest []byte, sig []byte, scheme string,key *Key) error
+	SendSignRequest(toSignBytes []byte, smartcontract string, key *Key) (pb.ClientSignResponse, error)
+	VerifySignature(digest []byte, sig []byte, scheme string, key *Key) error
 	InstallShare(key *Key) error
 }
 
-type permissionlessClient struct {}
+type permissionlessClient struct{}
 
-func (s permissionlessClient) SendSignRequest(toSignBytes []byte, smartcontract string,key *Key) (pb.ClientSignResponse, error) {
-	keyId,err := key.GetKeyId()
+func (s permissionlessClient) SendSignRequest(toSignBytes []byte, smartcontract string, key *Key) (pb.ClientSignResponse, error) {
+	keyId, err := key.GetKeyId()
 	if err != nil {
-		return pb.ClientSignResponse{},err
+		return pb.ClientSignResponse{}, err
 	}
 
-	return signPermissionless(toSignBytes,smartcontract,GetRandomGroupMember(key.GroupMembership),keyId)
+	return signPermissionless(toSignBytes, smartcontract, GetRandomGroupMember(key.GroupMembership), keyId)
 }
 
 func (s permissionlessClient) VerifySignature(digest []byte, sig []byte, scheme string, key *Key) error {
-	return verifySignature(digest,sig,scheme,key.PubKey,GetRandomGroupMember(key.GroupMembership))
+	return verifySignature(digest, sig, scheme, key.PubKey, GetRandomGroupMember(key.GroupMembership))
 }
 
 func NewPermissionlessClient() PermissionlessClient {
 	return permissionlessClient{}
 }
 
-func (s permissionlessClient) InstallShare(key *Key) error{
+func (s permissionlessClient) InstallShare(key *Key) error {
 	if err := key.Validate(); err != nil {
 		return err
 	}
 
 	//membership := GetSubsetMembership(s.signerNodeAddress,N)
-	for i,privKeyShare := range key.PrivKeys {
-		err := s.installShare(privKeyShare,key.PubKey,key.ValidUntil,
-			key.IsOneTimeKey,key.GroupMembership[i])
+	for i, privKeyShare := range key.PrivKeys {
+		err := s.installShare(privKeyShare, key.PubKey, key.ValidUntil,
+			key.IsOneTimeKey, key.GroupMembership[i])
 		if err != nil {
 			return err
 		}
@@ -96,11 +95,11 @@ func (s permissionlessClient) InstallShare(key *Key) error{
 	return nil
 }
 
-func (s permissionlessClient) installShare(priv crypto.PrivateKey,pub crypto.PublicKey,validUntil time.Time,
-	isOneTimeKey bool, address string) error{
+func (s permissionlessClient) installShare(priv crypto.PrivateKey, pub crypto.PublicKey, validUntil time.Time,
+	isOneTimeKey bool, address string) error {
 
-	privBytes,_ := priv.MarshalBinary()
-	pubBytes,_ := pub.MarshalBinary()
+	privBytes, _ := priv.MarshalBinary()
+	pubBytes, _ := pub.MarshalBinary()
 
 	msg := pb.ClientInstallShareRequest{
 		PublicKey:    pubBytes,
@@ -114,7 +113,6 @@ func (s permissionlessClient) installShare(priv crypto.PrivateKey,pub crypto.Pub
 	if err != nil {
 		return err
 	}
-
 
 	reader := bytes.NewReader(b)
 

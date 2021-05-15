@@ -9,13 +9,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ipfs/go-log"
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
+	nw "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"go.uber.org/atomic"
+	"io/ioutil"
 	"reflect"
 	"sync"
 	"time"
@@ -27,6 +30,10 @@ var logger = log.Logger("network")
 //BufSize defines the max size of message waiting to be processed
 //by a go routine
 const BufSize = 1024
+
+//DirectV1 is the protocol identification used to send direct messages
+// to a certain peer participating in the protocol.
+const DirectV1 = "/direct/1.0.0"
 
 //NetConfig is used to configure the p2p network
 //gives the possibility to:
@@ -43,7 +50,7 @@ type NetConfig struct {
 }
 
 type network struct {
-	messages chan []byte
+	messages chan *networkMessage
 
 	ctx context.Context
 	ps  *pubsub.PubSub
@@ -69,7 +76,7 @@ type network struct {
 type Group struct {
 	topic    *pubsub.Topic
 	sub      *pubsub.Subscription
-	messages chan<- []byte
+	messages chan<- *networkMessage
 	ctx      context.Context
 	cancel   context.CancelFunc
 }
@@ -79,8 +86,11 @@ type Network interface {
 	Broadcast(msg []byte) error
 	//BroadcastToGroup, broadcasts to all peers subscribed
 	//to a certain group
-	BroadcastToGroup(groupId string ,msg []byte) error
-	//Send(node string, msg []byte)
+	BroadcastToGroup(groupId string, msg []byte) error
+
+	//Send sends a message to a specific destination (to)
+	Send(msg []byte, to string) error
+
 	//JoinGroup - Joins a certain broadcast group
 	JoinGroup(groupId string) error
 	//LeaveGroup - Leaves a certain broadcast group
@@ -88,31 +98,57 @@ type Network interface {
 
 	//Receive messages from all subscribed groups and
 	//from the default group
-	Receive() []byte
+	Receive() ic.ICMessage
 
 	//Get a subset of the peers membership available
 	GetMembership() []peer.AddrInfo
 }
 
 func (n *network) Broadcast(msg []byte) error {
-	return n.mainGroup.Broadcast(msg,n.self)
+	return n.mainGroup.Broadcast(msg, n.self)
 }
 
-func (n *network) BroadcastToGroup(groupId string ,msg []byte) error {
-	logger.Infof("Broadcasting to group, %v",groupId)
+func (n *network) Send(msg []byte, to string) error {
+	var err error
+	toId := peer.ID(to)
+	logger.Infof("Sending direct message to , %v", toId.String())
+	if s, err := n.host.NewStream(n.ctx, toId, DirectV1); err == nil {
+		defer s.Close()
+		m := networkMessage{
+			From:    n.self,
+			To:      toId,
+			Content: msg,
+		}
+
+		msgBytes, err := m.MarshalBinary()
+
+		if err != nil {
+			return err
+		}
+
+		_, err = s.Write(msgBytes)
+	}
+	if err != nil {
+		logger.Error(err)
+	}
+	return err
+}
+
+func (n *network) BroadcastToGroup(groupId string, msg []byte) error {
+	logger.Infof("Broadcasting to group, %v", groupId)
 	n.groupsLock.Lock()
 	defer n.groupsLock.Unlock()
 
-	g,ok := n.groups[groupId]
+	g, ok := n.groups[groupId]
 
 	if !ok {
 		return errors.New("group does not exist")
 	}
 
-	return g.Broadcast(msg,n.self)
+	return g.Broadcast(msg, n.self)
 }
 
-func (g Group) Broadcast(msg []byte,self peer.ID) error {
+func (g Group) Broadcast(msg []byte, self peer.ID) error {
 	m := networkMessage{
 		From:    self,
 		Content: msg,
@@ -143,7 +179,7 @@ func (n *network) JoinGroup(groupId string) error {
 		//which in my case is bad. I produce a lot of messages when clients grow.
 		//Now the size of the topic channel is 128 instead of 32. Enough for a commodity machine being able to run
 		//5 signer nodes with 100 concurrent clients.
-		SetUnexportedField(reflect.ValueOf(sub).Elem().FieldByName("ch"),make(chan *pubsub.Message, 128))
+		SetUnexportedField(reflect.ValueOf(sub).Elem().FieldByName("ch"), make(chan *pubsub.Message, 128))
 		return nil
 	})
 
@@ -158,7 +194,7 @@ func (n *network) JoinGroup(groupId string) error {
 		sub:      sub,
 		messages: n.messages,
 		ctx:      ctx,
-		cancel: cancel,
+		cancel:   cancel,
 	}
 	n.groups[groupId] = g
 
@@ -177,8 +213,8 @@ func (n *network) LeaveGroup(groupId string) error {
 	n.groupsLock.Lock()
 	defer n.groupsLock.Unlock()
 
-	g,ok := n.groups[groupId]
-	delete(n.groups,groupId)
+	g, ok := n.groups[groupId]
+	delete(n.groups, groupId)
 
 	if !ok {
 		return errors.New("group does not exist")
@@ -189,8 +225,7 @@ func (n *network) LeaveGroup(groupId string) error {
 	return nil
 }
 
-func (n *network) Receive() []byte {
-	//TODO add context
+func (n *network) Receive() ic.ICMessage {
 	return <-n.messages
 }
 
@@ -217,9 +252,9 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 	}
 
 	ps, err := pubsub.NewGossipSub(ctx, h,
-							pubsub.WithDiscovery(disc),
-							pubsub.WithMessageSigning(false), //no need for signing
-							pubsub.WithPeerOutboundQueueSize(1024)) //Bigger outbound pool
+		pubsub.WithDiscovery(disc),
+		pubsub.WithMessageSigning(false),       //no need for signing
+		pubsub.WithPeerOutboundQueueSize(1024)) //Bigger outbound pool
 
 	topic, err := ps.Join("SignerNodeNetwork")
 
@@ -229,7 +264,7 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 	}
 
 	sub, err := topic.Subscribe(func(sub *pubsub.Subscription) error {
-		SetUnexportedField(reflect.ValueOf(sub).Elem().FieldByName("ch"),make(chan *pubsub.Message, 128))
+		SetUnexportedField(reflect.ValueOf(sub).Elem().FieldByName("ch"), make(chan *pubsub.Message, 128))
 		return nil
 	})
 
@@ -238,7 +273,7 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 		return nil, err
 	}
 
-	msgChan := make(chan []byte, BufSize)
+	msgChan := make(chan *networkMessage, BufSize)
 
 	network := &network{
 		messages: msgChan,
@@ -249,17 +284,36 @@ func CreateNetwork(ctx context.Context, config NetConfig) (Network, error) {
 			msgChan,
 			ctx,
 			nil},
-		self: h.ID(),
-		host: h,
-		disc: discovery,
+		self:   h.ID(),
+		host:   h,
+		disc:   discovery,
 		groups: make(map[string]Group),
 	}
 
 	go network.mainGroup.processIncomingMsg(network)
 
-	//showConnectedListPeers(network)
+	h.SetStreamHandler(DirectV1, network.directReplies)
 
 	return network, nil
+}
+
+func (n *network) directReplies(stream nw.Stream) {
+	b, err := ioutil.ReadAll(stream)
+	defer stream.Close()
+	if err != nil {
+		logger.Error(err)
+	}
+
+	cm := new(networkMessage)
+	err = cm.UnmarshalBinary(b)
+
+	logger.Infof("Receiving direct message from %v", cm.From)
+
+	if err != nil {
+		logger.Error(err)
+	}
+
+	n.messages <- cm
 }
 
 func (g Group) processIncomingMsg(n *network) {
@@ -271,7 +325,7 @@ func (g Group) processIncomingMsg(n *network) {
 		if err != nil {
 			logger.Debug(err)
 			n.numberOfRoutines.Dec()
-			if n.numberOfRoutines.Load() == 0{
+			if n.numberOfRoutines.Load() == 0 {
 				close(n.messages)
 			}
 			return
@@ -291,7 +345,7 @@ func (g Group) processIncomingMsg(n *network) {
 		}
 
 		// send valid messages onto the Messages channel
-		n.messages <- cm.Content
+		n.messages <- cm
 	}
 }
 
@@ -299,7 +353,7 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 
 	logger.Debug("Creating Peer Host")
 
-	listenAddr := fmt.Sprintf("%v%v",config.PeerAddress ,config.Port)
+	listenAddr := fmt.Sprintf("%v%v", config.PeerAddress, config.Port)
 	return libp2p.New(
 		context.Background(),
 		libp2p.ListenAddrStrings(listenAddr),
@@ -312,16 +366,6 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 	)
 
 }
-
-//func showConnectedListPeers(n *network) { //TODO to be deleted
-//	go func() {
-//		for {
-//
-//			fmt.Printf("PubSub: %v\n", n.ps.ListPeers("SignerNodeNetwork"))
-//			time.Sleep(10 * time.Second)
-//		}
-//	}()
-//}
 
 func NewBootstrapNode(ctx context.Context, config NetConfig) error {
 	h, err := newPeerHost(config)

@@ -10,21 +10,21 @@ type byzantineProtocol struct {
 }
 
 func (p *byzantineProtocol) Register(interconnect ic.Interconnect) error {
-	interconnect.RegisterHandler(ic.SignClientRequest,p.Sign)
-	interconnect.RegisterHandler(ic.InstallClientRequest,p.InstallShares)
-	interconnect.RegisterHandler(ic.NetworkMessage,p.processMessage)
+	interconnect.RegisterHandler(ic.SignClientRequest, p.Sign)
+	interconnect.RegisterHandler(ic.InstallClientRequest, p.InstallShares)
+	interconnect.RegisterHandler(ic.NetworkMessage, p.processMessage)
 	return nil
 }
 
-func (p *byzantineProtocol) InstallShares(data []byte,ctx ic.P2pContext) ic.HandlerResponse {
+func (p *byzantineProtocol) InstallShares(data ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
 	return ic.CreateOkMessage([]byte{})
 }
 
-func (p *byzantineProtocol) processMessage(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
+func (p *byzantineProtocol) processMessage(msg ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
 	logger.Debug("Received sign Request, processing.")
 
 	req := pb.ProtocolMessage{}
-	proto.Unmarshal(data, &req)
+	proto.Unmarshal(msg.GetData(), &req)
 
 	switch req.Type {
 	case pb.ProtocolMessage_SIGN_REQUEST:
@@ -32,7 +32,7 @@ func (p *byzantineProtocol) processMessage(data []byte, ctx ic.P2pContext) ic.Ha
 	case pb.ProtocolMessage_SIGN_RESPONSE:
 		p.processMessageSignResponse(&req, ctx)
 	}
-	return ic.CreateOkMessage(data)
+	return ic.CreateOkMessage(msg.GetData())
 }
 
 func (p *byzantineProtocol) processMessageSignResponse(req *pb.ProtocolMessage, ctx ic.P2pContext) {
@@ -66,7 +66,7 @@ func (p *byzantineProtocol) processMessageSignRequest(req *pb.ProtocolMessage, c
 	ctx.Broadcast(data)
 }
 
-func (p *byzantineProtocol) Sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
+func (p *byzantineProtocol) Sign(msg ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
 	//Do nothing
 	return ic.CreateOkMessage([]byte{})
 }

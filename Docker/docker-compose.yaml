@@ -49,6 +49,7 @@ services:
       - 8080
       - 9000
     ports:
+      - "8081:8080"
       - "46432:46432"
     command: ./main --peerport=46432 -k ./resources/keys/2/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
@@ -60,6 +61,7 @@ services:
       - 8080
       - 9000
     ports:
+      - "8082:8080"
       - "46433:46433"
     command: ./main --peerport=46433  -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
@@ -71,6 +73,7 @@ services:
       - 8080
       - 9000
     ports:
+      - "8083:8080"
       - "46434:46434"
     command: ./main --peerport=46434 -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
@@ -82,6 +85,7 @@ services:
       - 8080
       - 9000
     ports:
+      - "8084:8080"
       - "46435:46435"
     command: ./main --peerport=46435 -k ./resources/keys/5/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:

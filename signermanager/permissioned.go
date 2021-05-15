@@ -1,30 +1,31 @@
 package signermanager
 
 import (
-	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
-	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
-	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
+	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	"sync"
 	"time"
 )
 
 type permissionedProtocol struct {
-	requestLock sync.Mutex
-	requests    map[string]*request
-	crypto      crypto.ContextFactory
-	keychain    keychain.KeyChain
-	sc          smartcontractengine.SCContextFactory
-	interconnect ic.Interconnect
+	requestLock     sync.Mutex
+	requests        map[string]*request
+	crypto          crypto.ContextFactory
+	keychain        keychain.KeyChain
+	sc              smartcontractengine.SCContextFactory
+	interconnect    ic.Interconnect
+	broadcastAnswer bool
 }
 
 func (p *permissionedProtocol) Register(inter ic.Interconnect) error {
-	inter.RegisterHandler(ic.SignClientRequest,p.sign)
-	inter.RegisterHandler(ic.NetworkMessage,p.processMessage)
+	inter.RegisterHandler(ic.SignClientRequest, p.sign)
+	inter.RegisterHandler(ic.NetworkMessage, p.processMessage)
 	p.interconnect = inter
 	return nil
 }
@@ -66,19 +67,19 @@ func (r *permissionedProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid str
 	return v, false
 }
 
-func (p *permissionedProtocol) processMessage(data []byte, ctx ic.P2pContext) ic.HandlerResponse{
+func (p *permissionedProtocol) processMessage(msg ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
 	logger.Debug("Received sign Request, processing.")
 
 	req := pb.ProtocolMessage{}
-	proto.Unmarshal(data, &req)
+	proto.Unmarshal(msg.GetData(), &req)
 
 	switch req.Type {
 	case pb.ProtocolMessage_SIGN_REQUEST:
-		p.processMessageSignRequest(req.Content, ctx)
+		p.processMessageSignRequest(req.Content, msg.GetFrom(), ctx)
 	case pb.ProtocolMessage_SIGN_RESPONSE:
 		p.processMessageSignResponse(req.Content, ctx)
 	}
-	return ic.CreateOkMessage(data)
+	return ic.CreateOkMessage(msg.GetData())
 }
 
 func (p *permissionedProtocol) processMessageSignResponse(data []byte, ctx ic.P2pContext) {
@@ -133,7 +134,7 @@ func (p *permissionedProtocol) processMessageSignResponse(data []byte, ctx ic.P2
 	}
 }
 
-func (p *permissionedProtocol) processMessageSignRequest(data []byte, ctx ic.P2pContext) {
+func (p *permissionedProtocol) processMessageSignRequest(data []byte, from string, ctx ic.P2pContext) {
 	logger.Debug("Received sign Request")
 	reqSign := pb.ClientSignMessage{}
 	err := proto.Unmarshal(data, &reqSign)
@@ -160,16 +161,20 @@ func (p *permissionedProtocol) processMessageSignRequest(data []byte, ctx ic.P2p
 		return
 	}
 
-	respData, err := createSignResponse(reqSign.UUID,sigShare)
+	respData, err := createSignResponse(reqSign.UUID, sigShare)
 
-	ctx.Broadcast(respData)
+	if p.broadcastAnswer {
+		ctx.Broadcast(respData)
+	} else {
+		ctx.Send(respData, from)
+	}
 }
 
-func (p *permissionedProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerResponse {
-	logger.Infof("Broadcasting %v", string(data))
+func (p *permissionedProtocol) sign(msg ic.ICMessage, ctx ic.P2pContext) ic.HandlerResponse {
+	logger.Infof("Broadcasting %v", string(msg.GetData()))
 
 	req := pb.ClientSignMessage{}
-	err := proto.Unmarshal(data, &req)
+	err := proto.Unmarshal(msg.GetData(), &req)
 
 	if err != nil {
 		return ic.CreateErrorMessage(err)
@@ -188,7 +193,7 @@ func (p *permissionedProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerRe
 		return ic.CreateInvalidTransactionMessage()
 	}
 
-	respChan := make(chan ic.HandlerResponse,1)
+	respChan := make(chan ic.HandlerResponse, 1)
 	request := &request{
 		responseChan: respChan,
 		shares:       make([][]byte, 0),
@@ -203,7 +208,7 @@ func (p *permissionedProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerRe
 
 	p.addRequest(request, req.UUID)
 
-	signReq, err := createProtocolMessage(data, pb.ProtocolMessage_SIGN_REQUEST)
+	signReq, err := createProtocolMessage(msg.GetData(), pb.ProtocolMessage_SIGN_REQUEST)
 
 	if err != nil {
 		ic.CreateErrorMessage(err)
@@ -217,8 +222,8 @@ func (p *permissionedProtocol) sign(data []byte, ctx ic.P2pContext) ic.HandlerRe
 		return ic.CreateErrorMessage(err)
 	}
 
-	respData, err := createSignResponse(request.uuid,sigShare)
-	p.interconnect.EmitEvent(ic.NetworkMessage,respData)
+	respData, err := createSignResponse(request.uuid, sigShare)
+	p.interconnect.EmitEvent(ic.NetworkMessage, ic.NewMessageFromBytes(respData))
 	return <-respChan
 }
 
@@ -249,31 +254,15 @@ func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
 }
 
 func NewPermissionedProtocol(crypto crypto.ContextFactory, keychain keychain.KeyChain,
-	sc smartcontractengine.SCContextFactory) Protocol {
+	sc smartcontractengine.SCContextFactory, broadcastAnswer bool) Protocol {
 
 	p := permissionedProtocol{
-		requests: make(map[string]*request),
-		crypto:   crypto,
-		keychain: keychain,
-		sc:       sc,
+		requests:        make(map[string]*request),
+		crypto:          crypto,
+		keychain:        keychain,
+		sc:              sc,
+		broadcastAnswer: broadcastAnswer,
 	}
-
-	//toDO DELETE
-	//go func(){
-	//	for {
-	//		time.Sleep(2 * time.Second)
-	//		fmt.Println("Requests waiting:")
-	//		for _,v := range p.requests {
-	//			fmt.Println(v)
-	//			if v.submitTime.Before(time.Now().Add(2*time.Second)){
-	//				p.deleteRequest(v.uuid)
-	//				ic.SendErrorMessage(v.responseChan,errors.New("timeout"))
-	//				fmt.Println("Removing request")
-	//			}
-	//
-	//		}
-	//	}
-	//}()
 
 	return &p
 }

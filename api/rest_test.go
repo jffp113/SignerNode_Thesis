@@ -12,7 +12,7 @@ import (
 
 type mockResponseWriter struct {
 	status int
-	buff bytes.Buffer
+	buff   bytes.Buffer
 }
 
 func (m *mockResponseWriter) Header() http.Header {
@@ -34,15 +34,15 @@ func TestFuncHandlerOk(t *testing.T) {
 		&m,
 		&http.Request{
 			Method: "POST",
-			Body: ioutil.NopCloser(bytes.NewReader(data)),
+			Body:   ioutil.NopCloser(bytes.NewReader(data)),
 		},
 		func(data []byte) ic.HandlerResponse {
 			return ic.CreateOkMessage(data)
 		},
 		"POST")
 
-	assert.Equal(t,200,m.status)
-	assert.Equal(t,data,m.buff.Bytes())
+	assert.Equal(t, 200, m.status)
+	assert.Equal(t, data, m.buff.Bytes())
 }
 
 func TestFuncHandlerWrongMethod(t *testing.T) {
@@ -52,15 +52,15 @@ func TestFuncHandlerWrongMethod(t *testing.T) {
 		&m,
 		&http.Request{
 			Method: "GET",
-			Body: ioutil.NopCloser(bytes.NewReader(data)),
+			Body:   ioutil.NopCloser(bytes.NewReader(data)),
 		},
 		func(data []byte) ic.HandlerResponse {
 			return ic.CreateOkMessage(data)
 		},
 		"POST")
 
-	assert.Equal(t,405,m.status)
-	assert.Equal(t,[]byte(nil),m.buff.Bytes())
+	assert.Equal(t, 405, m.status)
+	assert.Equal(t, []byte(nil), m.buff.Bytes())
 }
 
 func TestFuncHandlerError(t *testing.T) {
@@ -71,15 +71,15 @@ func TestFuncHandlerError(t *testing.T) {
 		&m,
 		&http.Request{
 			Method: "POST",
-			Body: ioutil.NopCloser(bytes.NewReader(data)),
+			Body:   ioutil.NopCloser(bytes.NewReader(data)),
 		},
 		func(data []byte) ic.HandlerResponse {
 			return ic.CreateErrorMessage(err)
 		},
 		"POST")
 
-	assert.Equal(t,500,m.status)
-	assert.Equal(t,err.Error(),string(m.buff.Bytes()))
+	assert.Equal(t, 500, m.status)
+	assert.Equal(t, err.Error(), string(m.buff.Bytes()))
 }
 
 func TestFuncHandlerInvalid(t *testing.T) {
@@ -89,13 +89,13 @@ func TestFuncHandlerInvalid(t *testing.T) {
 		&m,
 		&http.Request{
 			Method: "POST",
-			Body: ioutil.NopCloser(bytes.NewReader(data)),
+			Body:   ioutil.NopCloser(bytes.NewReader(data)),
 		},
 		func(data []byte) ic.HandlerResponse {
 			return ic.CreateInvalidTransactionMessage()
 		},
 		"POST")
 
-	assert.Equal(t,500,m.status)
-	assert.Equal(t,[]byte(nil),m.buff.Bytes())
+	assert.Equal(t, 500, m.status)
+	assert.Equal(t, []byte(nil), m.buff.Bytes())
 }

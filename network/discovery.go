@@ -15,17 +15,17 @@ import (
 //in a P2P network. Discovery is supported by LibP2P discovery
 //and uses Kademlia DHT to support the discovery.
 type peerDiscovery struct {
-	ctx       context.Context
+	ctx context.Context
 	//The host represents a P2P node
 	host      host.Host
 	config    NetConfig
-	cancel context.CancelFunc
+	cancel    context.CancelFunc
 	discovery discovery.Discovery
 }
 
 //Creates a new discovery service to find new peers
 func NewDiscovery(ctx context.Context, host host.Host, config NetConfig) *peerDiscovery {
-	ctx,cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 	return &peerDiscovery{
 		ctx,
 		host,

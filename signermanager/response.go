@@ -33,7 +33,6 @@ func createInvalidMessageVerifyResponse() ic.HandlerResponse {
 	return ic.CreateOkMessage(b)
 }
 
-
 func createValidMessageVerifyMessages() ic.HandlerResponse {
 	logger.Debug("Creating valid verify response")
 	msg := pb.ClientVerifyResponse{Status: pb.ClientVerifyResponse_OK}
@@ -41,7 +40,7 @@ func createValidMessageVerifyMessages() ic.HandlerResponse {
 	return ic.CreateOkMessage(b)
 }
 
-func createValidMembershipResponse(addrs []peer.AddrInfo) ic.HandlerResponse{
+func createValidMembershipResponse(addrs []peer.AddrInfo) ic.HandlerResponse {
 	var peers []*pb.MembershipResponsePeer
 
 	for _, v := range addrs {
@@ -66,7 +65,7 @@ func peerAddressesToStringSlice(addr []ma.Multiaddr) []string {
 	return result
 }
 
-func createSignResponse(UUID string, signature []byte) ([]byte,error){
+func createSignResponse(UUID string, signature []byte) ([]byte, error) {
 	resp := pb.SignResponse{
 		UUID:      UUID,
 		Signature: signature,
@@ -76,9 +75,8 @@ func createSignResponse(UUID string, signature []byte) ([]byte,error){
 
 	if err != nil {
 		logger.Error(err)
-		return []byte{},err
+		return []byte{}, err
 	}
 
 	return createProtocolMessage(respData, pb.ProtocolMessage_SIGN_RESPONSE)
 }
-

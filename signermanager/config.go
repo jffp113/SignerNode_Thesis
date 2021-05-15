@@ -50,3 +50,10 @@ func SetPeerAddress(addr string) Config {
 		return nil
 	}
 }
+
+func SetBroadcastAnswer(broadcast bool) Config {
+	return func(m *signermanager) error {
+		m.broadcastAnswer = broadcast
+		return nil
+	}
+}

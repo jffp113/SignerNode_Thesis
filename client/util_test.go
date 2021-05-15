@@ -13,14 +13,12 @@ import (
 //}
 //
 
-
 //func TestGetNNearestNodes(t *testing.T) {
 //	cli := NewPermissionlessClient()
 //
 //	cli.GetNNearestNodes([]string{"149.210.219.5:1234","51.83.75.29:1234","95.217.57.18:1234","192.199.248.75:1234"},2)
 //
 //}
-
 
 func TestGetInsertSort(t *testing.T) {
 	v1 := RTT{
@@ -40,22 +38,22 @@ func TestGetInsertSort(t *testing.T) {
 		address: "1",
 	}
 
-	rtts := insertOrder([]RTT{},v1)
-	assert.Equal(t,v1,rtts[0])
+	rtts := insertOrder([]RTT{}, v1)
+	assert.Equal(t, v1, rtts[0])
 
-	rtts = insertOrder(rtts,v2)
-	assert.Equal(t,v2,rtts[0])
-	assert.Equal(t,v1,rtts[1])
+	rtts = insertOrder(rtts, v2)
+	assert.Equal(t, v2, rtts[0])
+	assert.Equal(t, v1, rtts[1])
 
-	rtts = insertOrder(rtts,v3)
-	assert.Equal(t,v2,rtts[0])
-	assert.Equal(t,v1,rtts[1])
-	assert.Equal(t,v3,rtts[2])
+	rtts = insertOrder(rtts, v3)
+	assert.Equal(t, v2, rtts[0])
+	assert.Equal(t, v1, rtts[1])
+	assert.Equal(t, v3, rtts[2])
 
-	rtts = insertOrder(rtts,v4)
-	assert.Equal(t,v2,rtts[0])
-	assert.Equal(t,v1,rtts[1])
-	assert.Equal(t,v3,rtts[2])
-	assert.Equal(t,v4,rtts[3])
+	rtts = insertOrder(rtts, v4)
+	assert.Equal(t, v2, rtts[0])
+	assert.Equal(t, v1, rtts[1])
+	assert.Equal(t, v3, rtts[2])
+	assert.Equal(t, v4, rtts[3])
 
 }

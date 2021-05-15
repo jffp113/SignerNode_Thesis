@@ -16,8 +16,8 @@ import (
 	"strconv"
 )
 
-func main()  {
-	isBootstrap,_ := strconv.ParseBool(os.Getenv("IS_BOOTSTRAP"))
+func main() {
+	isBootstrap, _ := strconv.ParseBool(os.Getenv("IS_BOOTSTRAP"))
 
 	if isBootstrap {
 		mainBootstrap()
@@ -36,23 +36,24 @@ func mainBootstrap() {
 	network.NewBootstrapNode(context.Background(), network.NetConfig{
 		RendezvousString: "",
 		//BootstrapPeers:   []string{"/ip4/127.0.0.1/tcp/52539/p2p/QmeTtPHwtjkmYUtjckbwXaMr4SDnyDZzcyWT1n32DE3A1n"},
-		Port: 55000,
-		Priv: priv,
+		Port:        55000,
+		Priv:        priv,
 		PeerAddress: "/ip4/0.0.0.0/tcp/",
 	})
 	select {}
 }
 
 type Opts struct {
-	Verbose       []bool `short:"v" long:"verbose" description:"Increase verbosity"`
-	ApiPort       int    `short:"p" long:"port" description:"API Port" default:"8080"`
-	SignerURI     string `short:"s" long:"signer" description:"Signer URI" default:"tcp://eth0:9000"`
-	ScURI         string `short:"c" long:"smartcontract" description:"SmartContract URI" default:"tcp://eth0:4004"`
-	BootstrapNode string `short:"b" long:"bootstrap" description:"Boostrap Node to find other signer nodes"`
-	KeyPath       string `short:"k" long:"keys" description:"Path for the private key and public key" default:"./resources/"`
-	Protocol      string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
-	PeerPort      int    `long:"peerport" description:"P2P peer port" default:"0"`
-	PeerAddress   string  `long:"peeraddr" description:"P2P listening address" default:"/ip4/0.0.0.0/tcp/"`
+	Verbose         []bool `short:"v" long:"verbose" description:"Increase verbosity"`
+	ApiPort         int    `short:"p" long:"port" description:"API Port" default:"8080"`
+	SignerURI       string `short:"s" long:"signer" description:"Signer URI" default:"tcp://eth0:9000"`
+	ScURI           string `short:"c" long:"smartcontract" description:"SmartContract URI" default:"tcp://eth0:4004"`
+	BootstrapNode   string `short:"b" long:"bootstrap" description:"Boostrap Node to find other signer nodes"`
+	KeyPath         string `short:"k" long:"keys" description:"Path for the private key and public key" default:"./resources/"`
+	Protocol        string `short:"t" long:"protocol" description:"API Port" default:"Permissioned"`
+	PeerPort        int    `long:"peerport" description:"P2P peer port" default:"0"`
+	PeerAddress     string `long:"peeraddr" description:"P2P listening address" default:"/ip4/0.0.0.0/tcp/"`
+	BroadcastAnswer bool   `long:"broadcastreply" description:"Defines if we a signer node should broadcast a signature share to all nodes"`
 }
 
 func mainSignerNode() {
@@ -95,6 +96,7 @@ func mainSignerNode() {
 		signermanager.SetScURI(opts.ScURI),
 		signermanager.SetPeerPort(opts.PeerPort),
 		signermanager.SetPeerAddress(opts.PeerAddress),
+		signermanager.SetBroadcastAnswer(opts.BroadcastAnswer),
 	)
 
 	//Initiate signermanager

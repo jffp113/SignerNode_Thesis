@@ -26,11 +26,11 @@ func (s *permisisonedClient) getSignerAddress() string {
 
 func (s *permisisonedClient) VerifySignature(digest []byte, sig []byte, scheme string,
 	pubKey crypto.PublicKey) error {
-	return verifySignature(digest,sig,scheme,pubKey,s.getSignerAddress())
+	return verifySignature(digest, sig, scheme, pubKey, s.getSignerAddress())
 }
 
 func (s *permisisonedClient) SendSignRequest(toSignBytes []byte, smartcontract string) (pb.ClientSignResponse, error) {
-	return signPermissioned(toSignBytes,smartcontract,s.getSignerAddress())
+	return signPermissioned(toSignBytes, smartcontract, s.getSignerAddress())
 }
 
 func NewPermissionedClient(configs ...PermissionedConfig) (PermissionedClient, error) {
