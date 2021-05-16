@@ -1,6 +1,7 @@
 package signermanager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
@@ -13,14 +14,16 @@ import (
 	"time"
 )
 
+//permissionedProtocol represents a protocol where the participants
+//are known in advance and every key share was previously installed
 type permissionedProtocol struct {
-	requestLock     sync.Mutex
-	requests        map[string]*request
-	crypto          crypto.ContextFactory
-	keychain        keychain.KeyChain
-	sc              smartcontractengine.SCContextFactory
-	interconnect    ic.Interconnect
-	broadcastAnswer bool
+	requests         sync.Map //map[string]*request
+	crypto           crypto.ContextFactory
+	keychain         keychain.KeyChain
+	sc               smartcontractengine.SCContextFactory
+	interconnect     ic.Interconnect
+	broadcastAnswer  bool
+	deleteStaleReqCh chan string
 }
 
 func (p *permissionedProtocol) Register(inter ic.Interconnect) error {
@@ -31,24 +34,38 @@ func (p *permissionedProtocol) Register(inter ic.Interconnect) error {
 }
 
 func (p *permissionedProtocol) addRequest(req *request, uuid string) {
-	p.requestLock.Lock()
-	defer p.requestLock.Unlock()
-	p.requests[uuid] = req
+	ctx,cancel := context.WithCancel(context.Background())
+	req.ctx = ctx
+	req.timer = time.AfterFunc(TimeoutRequestTime, func() {
+		cancel()
+		p.deleteStaleReqCh <- uuid
+	})
+	p.requests.Store(uuid, req)
 }
 
 func (p *permissionedProtocol) deleteRequest(uuid string) {
-	p.requestLock.Lock()
-	defer p.requestLock.Unlock()
 	logger.Debugf("Removing request with uuid %v", uuid)
-	delete(p.requests, uuid)
+	v, ok := p.requests.LoadAndDelete(uuid)
+
+	if ok {
+		req := v.(*request)
+		req.timer.Stop()
+	}
+}
+
+func (p *permissionedProtocol) getRequest(uuid string) (*request, bool) {
+	v, ok := p.requests.Load(uuid)
+
+	if !ok {
+		return &request{}, ok
+	}
+
+	return v.(*request), ok
 }
 
 func (r *permissionedProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid string) (*request, bool) {
-	//Lock so no one removes things from requests
-	r.requestLock.Lock()
-	defer r.requestLock.Unlock()
 	//See if the request exists
-	v, ok := r.requests[uuid]
+	v, ok := r.getRequest(uuid)//TODO see if there is a concorrency problem
 
 	if !ok {
 		//Does not exist returns false
@@ -97,14 +114,17 @@ func (p *permissionedProtocol) processMessageSignResponse(data []byte, ctx ic.P2
 	//Check if can aggregate if yes start other
 	if v, ready := p.AddSigAndTestForEnoughShares(signatureMsg.Signature, signatureMsg.UUID); ready {
 		firstExec := true
-		//Todo add context with timer
 		for {
 			if !firstExec {
 				select {
 				case newSig := <-v.sharesChan:
 					v.shares = append(v.shares, newSig)
+				case  <-v.ctx.Done():
+					//It was canceled due a timeout
+					logger.Debug("Signature aggregation cancelled due timeout")
+					return
 				default:
-					logger.Debug("No new signature shares")
+					//logger.Debug("No new signature shares")
 					continue
 				}
 			}
@@ -203,7 +223,6 @@ func (p *permissionedProtocol) sign(msg ic.ICMessage, ctx ic.P2pContext) ic.Hand
 		scheme:       signInfo.Scheme,
 		digest:       req.Content,
 		uuid:         req.UUID,
-		submitTime:   time.Now(),
 	}
 
 	p.addRequest(request, req.UUID)
@@ -240,6 +259,8 @@ func (p *permissionedProtocol) signWithShare(req *pb.ClientSignMessage, scheme s
 	return signWithShare(req.Content, privShare, p.crypto, scheme, n, t)
 }
 
+//aggregateShares receives a request and tries to aggregate the signature shares
+//produced by the different signer nodes.
 func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
 	keyName := fmt.Sprintf("%v_%v_%v", req.scheme, req.n, req.t)
 
@@ -253,16 +274,23 @@ func (p *permissionedProtocol) aggregateShares(req *request) ([]byte, error) {
 	return aggregateShares(req, pubKey, p.crypto)
 }
 
+//NewPermissionedProtocol creates a new permissioned protocol with a specific crypto context,
+//keychain, smartcontract proxy factory and passing a boolean (broadcastAnswer) to indicate
+//if the replies should be broadcasted to all signer nodes.
 func NewPermissionedProtocol(crypto crypto.ContextFactory, keychain keychain.KeyChain,
 	sc smartcontractengine.SCContextFactory, broadcastAnswer bool) Protocol {
 
 	p := permissionedProtocol{
-		requests:        make(map[string]*request),
-		crypto:          crypto,
-		keychain:        keychain,
-		sc:              sc,
-		broadcastAnswer: broadcastAnswer,
+		requests:         sync.Map{}, //make(map[string]*request),
+		crypto:           crypto,
+		keychain:         keychain,
+		sc:               sc,
+		broadcastAnswer:  broadcastAnswer,
+		deleteStaleReqCh: make(chan string, 1),
 	}
+
+	go deleteNoneCompleteRequests(&p.requests, p.deleteStaleReqCh, context.TODO())
 
 	return &p
 }
+

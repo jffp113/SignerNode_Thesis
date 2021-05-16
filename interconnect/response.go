@@ -40,7 +40,6 @@ func CreateOkMessage(data []byte) HandlerResponse {
 }
 
 func SendErrorMessage(c chan<- HandlerResponse, err error) {
-	logger.Error(err)
 	c <- CreateErrorMessage(err)
 }
 

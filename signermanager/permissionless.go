@@ -136,7 +136,7 @@ func (p *permissionlessProtocol) processMessage(msg ic.ICMessage, ctx ic.P2pCont
 
 	switch req.Type {
 	case pb.ProtocolMessage_SIGN_REQUEST:
-		p.processMessageSignRequest(req.Content,msg.GetFrom(),ctx)
+		p.processMessageSignRequest(req.Content, msg.GetFrom(), ctx)
 	case pb.ProtocolMessage_SIGN_RESPONSE:
 		p.processMessageSignResponse(req.Content, ctx)
 	}
@@ -145,7 +145,7 @@ func (p *permissionlessProtocol) processMessage(msg ic.ICMessage, ctx ic.P2pCont
 
 }
 
-func (p *permissionlessProtocol) processMessageSignRequest(data []byte, from string ,ctx ic.P2pContext) {
+func (p *permissionlessProtocol) processMessageSignRequest(data []byte, from string, ctx ic.P2pContext) {
 	logger.Debug("Received sign Request")
 	reqSign := pb.ClientSignMessage{}
 	err := proto.Unmarshal(data, &reqSign)
@@ -174,10 +174,10 @@ func (p *permissionlessProtocol) processMessageSignRequest(data []byte, from str
 
 	respData, err := createSignResponse(reqSign.UUID, sigShare)
 
-	if p.broadcastAnswer{
+	if p.broadcastAnswer {
 		ctx.BroadcastToGroup(reqSign.KeyId, respData)
 	} else {
-		ctx.Send(respData,from)
+		ctx.Send(respData, from)
 	}
 }
 
@@ -396,7 +396,7 @@ func NewPermissionlessProtocol(crypto crypto.ContextFactory, sc smartcontracteng
 		crypto:           crypto,
 		sc:               sc,
 		network:          network,
-		broadcastAnswer: broadcastAnswer,
+		broadcastAnswer:  broadcastAnswer,
 	}
 
 	return &p

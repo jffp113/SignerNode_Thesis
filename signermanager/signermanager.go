@@ -103,7 +103,7 @@ func (s *signermanager) Init() error {
 		return err
 	}
 
-	p, err := GetProtocol(s.protocolName, s.cryptoFactory, s.keychain, s.scFactory, s.network,s.broadcastAnswer)
+	p, err := GetProtocol(s.protocolName, s.cryptoFactory, s.keychain, s.scFactory, s.network, s.broadcastAnswer)
 
 	if err != nil {
 		return err
@@ -128,21 +128,6 @@ func (s *signermanager) Init() error {
 
 	return nil
 }
-
-//type signContext struct {
-//	returnChan chan<- ManagerResponse
-//	broadcast  func(msg []byte) error
-//	broadcastToGroup func(groupId string ,msg []byte) error
-//	joinGroup func(groupId string) error
-//	leaveGroup func(groupId string) error
-//}
-
-//type processContext struct {
-//	broadcast func(msg []byte) error
-//	broadcastToGroup func(groupId string ,msg []byte) error
-//	joinGroup func(groupId string) error
-//	leaveGroup func(groupId string) error
-//}
 
 //Emit a specific event type (HandlerType) in a defined protocol
 //or in the signer manager.

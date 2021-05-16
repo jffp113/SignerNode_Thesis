@@ -1,6 +1,7 @@
 package signermanager
 
 import (
+	"context"
 	"errors"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
@@ -16,6 +17,8 @@ const PERMISSIONED = "Permissioned"
 const PERMISSIONLESS = "Permissionless"
 const BYZANTINE = "Byzantine"
 
+const TimeoutRequestTime = 5 * time.Second
+
 type Protocol interface {
 	Register(ic ic.Interconnect) error
 }
@@ -26,7 +29,7 @@ func GetProtocol(protocolName string, factory crypto.ContextFactory,
 	case PERMISSIONED:
 		return NewPermissionedProtocol(factory, keychain, scFactory, broadcastAnswer), nil
 	case PERMISSIONLESS:
-		return NewPermissionlessProtocol(factory, scFactory, network,broadcastAnswer), nil
+		return NewPermissionlessProtocol(factory, scFactory, network, broadcastAnswer), nil
 	case BYZANTINE:
 		return NewByzantineProtocol(), nil
 	default:
@@ -41,16 +44,25 @@ type request struct {
 	lock sync.Mutex
 	//Chan to respond to the client
 	responseChan chan<- ic.HandlerResponse
+
 	//Signature shares from every signernode
 	shares                [][]byte
 	sharesChan            chan []byte
 	aggregatingInProgress atomic.Bool
 	insertInSharesChan    bool
+
+	//request information to build the signature
 	t, n                  int
 	scheme                string
-	uuid                  string
 	digest                []byte
-	submitTime            time.Time
+
+	//uuid to identify unequivocally a request
+	uuid                  string
+
+	//fields to allow to cancel a request when to much
+	//time has elapsed
+	timer                 *time.Timer
+	ctx						context.Context
 }
 
 //Will return true when has enough shares at the first time
@@ -72,3 +84,21 @@ func (r *request) AddSigAndCheckIfHaveEnoughShares(sig []byte) bool {
 	r.insertInSharesChan = len(r.shares) >= r.t
 	return r.insertInSharesChan
 }
+
+//DeleteNoneCompleteRequests deletes requests that weren't fulfilled in a predefined time.
+func deleteNoneCompleteRequests(requests *sync.Map, deleteCh <-chan string, ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case key := <-deleteCh:
+			v, ok := requests.LoadAndDelete(key)
+			if ok {
+				req := v.(*request)
+				logger.Error("Request timeout for: ", req.uuid)
+				ic.SendErrorMessage(req.responseChan, errors.New("request timeout"))
+			}
+		}
+	}
+}
+
