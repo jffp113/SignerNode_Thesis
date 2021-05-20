@@ -61,10 +61,20 @@ services:
       - 9000
     ports:
       - "46433:46433"
-    command: ./main --peerport=46433 -t Byzantine  -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    command: ./main --peerport=46433  -k ./resources/keys/3/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
     depends_on:
       - bootstrap
-
+  signernode-4:
+    image: ghcr.io/jffp113/signernode
+    container_name: signernode-4
+    expose:
+      - 8080
+      - 9000
+    ports:
+      - "46434:46434"
+    command: ./main --peerport=46434  -k ./resources/keys/4/ -b /dns4/bootstrap/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+    depends_on:
+      - bootstrap
 # -------------=== crypto ===-------------
   crypto-1:
     image: ghcr.io/jffp113/crypto
@@ -84,21 +94,39 @@ services:
     command:  bash -c "sleep 3; ./main -u tcp://signernode-3:9000"
     depends_on:
       - signernode-3
+  crypto-4:
+    image: ghcr.io/jffp113/crypto
+    container_name: crypto-4
+    command: bash -c "sleep 3; ./main -u tcp://signernode-4:9000"
+    depends_on:
+      - signernode-4
 
 # -------------=== smartcontract ===-------------
 
   smartcontract-1:
     image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-1
-    command: intkey-tp-go -vv -C tcp://signernode-1:4004 -s TBLS256Optimistic
+    command: intkey-tp-go -vv -C tcp://signernode-1:4004 -s TBLS256Optimistic -t 3 -n 4
     depends_on:
       - signernode-1
   smartcontract-2:
     image: ghcr.io/jffp113/sawtooth-smartcontract
     container_name: smartcontract-2
-    command: intkey-tp-go -vv -C tcp://signernode-2:4004 -s TBLS256Optimistic
+    command: intkey-tp-go -vv -C tcp://signernode-2:4004 -s TBLS256Optimistic -t 3 -n 4
     depends_on:
       - signernode-2
+  smartcontract-3:
+    image: ghcr.io/jffp113/sawtooth-smartcontract
+    container_name: smartcontract-3
+    command: intkey-tp-go -vv -C tcp://signernode-3:4004 -s TBLS256Optimistic -t 3 -n 4
+    depends_on:
+      - signernode-3
+  smartcontract-4:
+    image: ghcr.io/jffp113/sawtooth-smartcontract
+    container_name: smartcontract-4
+    command: intkey-tp-go -vv -C tcp://signernode-4:4004 -s TBLS256Optimistic -t 3 -n 4
+    depends_on:
+      - signernode-4
 
 networks:
   default:
