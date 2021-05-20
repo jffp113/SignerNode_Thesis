@@ -1,6 +1,7 @@
 package signermanager
 
 import (
+	"context"
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
@@ -16,8 +17,8 @@ import (
 const TimeSlack = time.Second * -10
 
 type permissionlessProtocol struct {
-	requestsLock sync.Mutex //TODO see if sync.map is better for lock contention
-	requests     map[string]*request
+	//requestsLock sync.Mutex
+	requests sync.Map //map[string]*request
 
 	installedKeys sync.Map //map[string]*keyInfo
 
@@ -28,8 +29,9 @@ type permissionlessProtocol struct {
 	sc      smartcontractengine.SCContextFactory
 	network network.Network
 
-	interconnect    ic.Interconnect
-	broadcastAnswer bool
+	interconnect     ic.Interconnect
+	broadcastAnswer  bool
+	deleteStaleReqCh chan string
 }
 
 func (p *permissionlessProtocol) Register(interconnect ic.Interconnect) error {
@@ -58,16 +60,32 @@ func (k keyInfo) expired() bool {
 }
 
 func (p *permissionlessProtocol) addRequest(req *request, uuid string) {
-	p.requestsLock.Lock()
-	defer p.requestsLock.Unlock()
-	p.requests[uuid] = req
+	ctx,cancel := context.WithCancel(context.Background())
+	req.ctx = ctx
+	req.timer = time.AfterFunc(TimeoutRequestTime, func() {
+		cancel()
+		p.deleteStaleReqCh <- uuid
+	})
+	p.requests.Store(uuid,req)
 }
 
 func (p *permissionlessProtocol) deleteRequest(uuid string) {
-	p.requestsLock.Lock()
-	defer p.requestsLock.Unlock()
-	logger.Debugf("Removing request with uuid %v", uuid)
-	delete(p.requests, uuid)
+	v, ok := p.requests.LoadAndDelete(uuid)
+
+	if ok {
+		req := v.(*request)
+		req.timer.Stop()
+	}
+}
+
+func (p *permissionlessProtocol) getRequest(uuid string) (*request,bool){
+	v, ok := p.requests.Load(uuid)
+
+	if !ok {
+		return &request{}, ok
+	}
+
+	return v.(*request), ok
 }
 
 func (p *permissionlessProtocol) addNewRequestToKey(requestUUID, keyID string) {
@@ -105,11 +123,8 @@ func (p *permissionlessProtocol) deleteInstalledKey(keyId string) {
 }
 
 func (r *permissionlessProtocol) AddSigAndTestForEnoughShares(sig []byte, uuid string) (*request, bool) {
-	//Lock so no one removes things from requests
-	r.requestsLock.Lock()
-	defer r.requestsLock.Unlock()
 	//See if the request exists
-	v, ok := r.requests[uuid]
+	v, ok := r.getRequest(uuid) //TOdo se if concorrent problems
 
 	if !ok {
 		//Does not exist returns false
@@ -202,8 +217,11 @@ func (p *permissionlessProtocol) processMessageSignResponse(data []byte, ctx ic.
 				select {
 				case newSig := <-v.sharesChan:
 					v.shares = append(v.shares, newSig)
+				case  <-v.ctx.Done():
+					//It was canceled due a timeout
+					logger.Debug("Signature aggregation cancelled due timeout")
 				default:
-					logger.Debug("No new signature shares")
+					//logger.Debug("No new signature shares")
 					continue
 				}
 			}
@@ -360,6 +378,8 @@ func (p *permissionlessProtocol) installShares(msg ic.ICMessage, ctx ic.P2pConte
 	return ic.CreateOkMessage([]byte{})
 }
 
+//ShareGarbageCollector removes stale key shares
+//TODO not used? what
 func (p *permissionlessProtocol) ShareGarbageCollector() {
 	var toDeleteKeys []string
 
@@ -388,8 +408,7 @@ func NewPermissionlessProtocol(crypto crypto.ContextFactory, sc smartcontracteng
 	network network.Network, broadcastAnswer bool) Protocol {
 
 	p := permissionlessProtocol{
-		requestsLock:     sync.Mutex{},
-		requests:         make(map[string]*request),
+		requests:         sync.Map{},//make(map[string]*request),
 		installedKeys:    sync.Map{}, //make(map[string]*keyInfo),
 		requestToKeyLock: sync.RWMutex{},
 		requestToKey:     make(map[string]string),
@@ -397,7 +416,10 @@ func NewPermissionlessProtocol(crypto crypto.ContextFactory, sc smartcontracteng
 		sc:               sc,
 		network:          network,
 		broadcastAnswer:  broadcastAnswer,
+		deleteStaleReqCh: make(chan string,1),
 	}
+
+	go deleteNoneCompleteRequests(&p.requests, p.deleteStaleReqCh, context.TODO())
 
 	return &p
 }
