@@ -359,7 +359,7 @@ func newPeerHost(config NetConfig) (host.Host, error) {
 		libp2p.ListenAddrStrings(listenAddr),
 		libp2p.ConnectionManager(connmgr.NewConnManager(
 			3,           // Lowwater
-			10,          // HighWater,
+			100,          // HighWater,
 			time.Minute, // GracePeriod
 		)),
 		libp2p.Identity(config.Priv),

@@ -17,7 +17,8 @@ const PERMISSIONED = "Permissioned"
 const PERMISSIONLESS = "Permissionless"
 const BYZANTINE = "Byzantine"
 
-const TimeoutRequestTime = 5 * time.Second
+//TODO make this as default and give th possibility to configure other timeouts
+const TimeoutRequestTime = 100 * time.Second
 
 type Protocol interface {
 	Register(ic ic.Interconnect) error
