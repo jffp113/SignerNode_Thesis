@@ -1,0 +1,42 @@
+# Variables
+# BOOTSTRAP
+# export BOOTSTRAP=51.83.75.29
+# export ID=1
+# export IP=51.83.75.29
+# export API_PORT=8080
+# export PORT=46431
+# export CRYPTO_PORT=9000
+# export SMARTCONTRACT_PORT=4004
+
+version: '3.6'
+
+services:
+
+# -------------=== signer node ===-------------
+  signernode:
+    image: ghcr.io/jffp113/signernode
+#    container_name: signernode-1
+    expose:
+      - ${API_PORT}
+      - 9000
+      - 4004
+    network_mode: "host"
+    command: ./main -t Permissionless -p ${API_PORT} --peeraddr=/ip4/${IP}/tcp/ --peerport=${PORT} -s tcp://${IP}:${CRYPTO_PORT} -c tcp://${IP}:${SMARTCONTRACT_PORT} -k ./resources/keys/${ID}/ -b /ip4/${BOOTSTRAP}/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B -vv
+
+# -------------=== crypto ===-------------
+  crypto:
+    image: ghcr.io/jffp113/crypto
+#    container_name: crypto-1
+    network_mode: "host"
+    command: bash -c "sleep 3; ./main -u tcp://${IP}:${CRYPTO_PORT}"
+    depends_on:
+      - signernode
+
+# -------------=== smartcontract ===-------------
+  smartcontract:
+    image: ghcr.io/jffp113/sawtooth-smartcontract
+#    container_name: smartcontract-1
+    command: intkey-tp-go -vv -C tcp://${IP}:${SMARTCONTRACT_PORT} -s ${SCHEME} -t ${T} -n ${N}
+    network_mode: "host"
+    depends_on:
+      - signernode

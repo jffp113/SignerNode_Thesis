@@ -17,8 +17,8 @@ const PERMISSIONED = "Permissioned"
 const PERMISSIONLESS = "Permissionless"
 const BYZANTINE = "Byzantine"
 
-//TODO make this as default and give th possibility to configure other timeouts
-const TimeoutRequestTime = 100 * time.Second
+//TODO make this as default and give the possibility to configure other timeouts
+const TimeoutRequestTime = 1000 * time.Second
 
 type Protocol interface {
 	Register(ic ic.Interconnect) error
@@ -32,7 +32,7 @@ func GetProtocol(protocolName string, factory crypto.ContextFactory,
 	case PERMISSIONLESS:
 		return NewPermissionlessProtocol(factory, scFactory, network, broadcastAnswer), nil
 	case BYZANTINE:
-		return NewByzantineProtocol(), nil
+		return NewByzantineProtocol(factory, keychain, scFactory, broadcastAnswer), nil
 	default:
 		return nil, errors.New("protocol does not exist")
 	}
