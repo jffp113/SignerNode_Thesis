@@ -11,6 +11,7 @@ import (
 	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
 	"go.uber.org/atomic"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -56,7 +57,7 @@ func (k *Key) GetKeyId() (string, error) {
 type PermissionlessClient interface {
 	SendSignRequest(toSignBytes []byte, smartcontract string, key *Key) (pb.ClientSignResponse, error)
 	VerifySignature(digest []byte, sig []byte, scheme string, key *Key) error
-	InstallShare(key *Key) error
+	InstallShare(key *Key,parallel bool) error
 }
 
 type permissionlessClient struct{}
@@ -78,18 +79,49 @@ func NewPermissionlessClient() PermissionlessClient {
 	return permissionlessClient{}
 }
 
-func (s permissionlessClient) InstallShare(key *Key) error {
+func (s permissionlessClient) InstallShare(key *Key,parallel bool) error {
 	if err := key.Validate(); err != nil {
 		return err
 	}
 
-	//membership := GetSubsetMembership(s.signerNodeAddress,N)
+	if parallel{
+		return s.InstallSharesParallel(key)
+	}else {
+		return s.InstallShareNonParallel(key)
+	}
+
+}
+
+func (s permissionlessClient) InstallShareNonParallel(key *Key) error {
 	for i, privKeyShare := range key.PrivKeys {
 		err := s.installShare(privKeyShare, key.PubKey, key.ValidUntil,
 			key.IsOneTimeKey, key.GroupMembership[i])
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (s permissionlessClient) InstallSharesParallel(key *Key) error {
+	var berr atomic.Bool
+	var wg sync.WaitGroup
+	wg.Add(key.N)
+	for i, privKeyShare := range key.PrivKeys {
+		go func(priv crypto.PrivateKey,signernode string) {
+			err := s.installShare(priv, key.PubKey, key.ValidUntil,
+				key.IsOneTimeKey, signernode)
+			if err != nil {
+				berr.Swap(true)
+			}
+			wg.Done()
+		}(privKeyShare,key.GroupMembership[i])
+	}
+
+	wg.Wait()
+
+	if berr.Load(){
+		return errors.New("error installing shares")
 	}
 
 	return nil
