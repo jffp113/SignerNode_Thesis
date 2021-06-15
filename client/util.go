@@ -81,7 +81,15 @@ type RTT struct {
 	address string
 }
 
-func GetNNearestNodes(signernodes []string, n int) []string {
+func GetNNearestNodes(signernodes []string, n int, parallel bool) []string {
+	if parallel {
+		return GetNNearestNodesParallel(signernodes,n)
+	}else{
+		return GetNNearestNodesSerial(signernodes,n)
+	}
+}
+
+func GetNNearestNodesSerial(signernodes []string, n int) []string{
 	var rtts []RTT
 
 	if len(signernodes) < n {
@@ -117,6 +125,50 @@ func GetNNearestNodes(signernodes []string, n int) []string {
 
 	return result[:n]
 }
+
+func GetNNearestNodesParallel(signernodes []string, n int) []string {
+	var rtts []RTT
+
+	if len(signernodes) < n {
+		return []string{}
+	}
+
+	responseCh := make(chan RTT,1)
+
+	for i := range signernodes {
+		go func(i int) {
+			addr := strings.Split(signernodes[i], ":")
+
+			if pinger, err := ping.NewPinger(addr[0]); err == nil {
+				pinger.Count = 3
+				pinger.Run()
+				stats := pinger.Statistics()
+
+				responseCh <- RTT{
+					rtt:     stats.AvgRtt,
+					address: signernodes[i],
+				}
+			}
+		}(i)
+	}
+
+	for i := 0 ; i < n ; i++ {
+		rtts = insertOrder(rtts, <-responseCh)
+	}
+
+	if len(rtts) < n {
+		return []string{}
+	}
+
+	result := make([]string, 0, n)
+	for i := range rtts {
+		result = append(result, rtts[i].address)
+	}
+
+	return result[:n]
+}
+
+
 
 func insertOrder(rtts []RTT, v RTT) []RTT {
 	for i := range rtts {
