@@ -21,6 +21,18 @@ clean:
 	rm bootstrap
 	rm signernode
 
+run-permissioned:
+	docker-compose  -f Docker/docker-compose.yaml up
+
+stop-permissioned:
+	docker-compose  -f Docker/docker-compose.yaml down
+
+run-permissionless:
+	docker-compose -f Docker/docker-compose-permissionless.yaml up
+
+stop-permissionless:
+	docker-compose -f Docker/docker-compose-permissionless.yaml up
+
 # ==============================================================================
 # Modules support
 tidy:
