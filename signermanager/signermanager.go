@@ -2,7 +2,7 @@ package signermanager
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ipfs/go-log"
+	"github.com/ipfs/go-log/v2"
 	"github.com/jffp113/CryptoProviderSDK/client"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"

@@ -5,7 +5,6 @@ go 1.15
 require (
 	github.com/go-ping/ping v0.0.0-20210506233800-ff8be3320020
 	github.com/golang/protobuf v1.4.3
-	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.0.5
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jffp113/CryptoProviderSDK v0.0.7

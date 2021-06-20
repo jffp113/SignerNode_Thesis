@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ipfs/go-log"
+	"github.com/ipfs/go-log/v2"
 	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"

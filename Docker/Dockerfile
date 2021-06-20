@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:20.04 as builder
 
 RUN apt-get update
 
@@ -8,10 +8,9 @@ ENV DEBIAN_FRONTEND='noninteractive'
 RUN apt-get install -y libzmq3-dev \
                         wget \
                         pkg-config \
-                        gcc \
+                        #gcc \
+                        build-essential \
                         git
-
-RUN git config --global url."https://jffp113:d635c14a90e10ab8ddbf3a09a8ef8c16507ea08e@github.com".insteadOf https://github.com
 
 RUN wget https://golang.org/dl/go1.15.7.linux-amd64.tar.gz ; \
     tar -C /usr/local -xzf go1.15.7.linux-amd64.tar.gz ; \
@@ -19,15 +18,17 @@ RUN wget https://golang.org/dl/go1.15.7.linux-amd64.tar.gz ; \
 
 WORKDIR project
 
-COPY go.mod .
-COPY go.sum .
-
-RUN go mod download
-
 COPY . .
 
-#RUN go build signernode.go
-#RUN go build main_bootstrap.go
-RUN go build main.go
+RUN make build
 
-CMD ["./main"]
+FROM ubuntu:20.04
+
+RUN apt-get update
+RUN apt-get install -y libzmq3-dev
+
+COPY ./resources/ ./resources
+COPY --from=builder ./project/signernode ./
+COPY --from=builder ./project/bootstrap ./
+
+CMD ["./signernode"]

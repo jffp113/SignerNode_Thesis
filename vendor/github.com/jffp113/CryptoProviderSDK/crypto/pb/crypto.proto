@@ -1,0 +1,101 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "pb";
+
+
+enum Type {
+  DEFAULT = 0;
+  SIGN_REQUEST = 100;
+  SIGN_RESPONSE = 101;
+  VERIFY_REQUEST = 200;
+  VERIFY_RESPONSE = 201;
+  AGGREGATE_REQUEST = 300;
+  AGGREGATE_RESPONSE = 301;
+  GENERATE_THS_REQUEST = 400;
+  GENERATE_THS_RESPONSE = 401;
+}
+
+message GenerateTHSRequest {
+
+  string scheme = 1;
+
+  uint32 t = 2;
+  uint32 n = 3;
+
+}
+
+message GenerateTHSResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    ERROR = 2;
+  }
+
+  Status status = 1;
+
+  bytes publicKey = 2;
+  repeated bytes privateKeys = 3;
+}
+
+message SignRequest {
+
+  string scheme = 1;
+
+  bytes digest = 2;
+  bytes privateKeys = 3;
+}
+
+message SignResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    ERROR = 2;
+  }
+
+  Status status = 1;
+
+  bytes signature = 2;
+}
+
+
+message VerifyRequest {
+
+  string scheme = 1;
+
+  bytes signature = 2;
+  bytes msg = 3;
+  bytes pubKey = 4;
+}
+
+message VerifyResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    ERROR = 2;
+  }
+
+  Status status = 1;
+}
+
+message AggregateRequest {
+
+  string scheme = 1;
+
+  repeated bytes share = 2;
+  bytes digest = 3;
+  bytes pubKey = 4;
+  int32 t = 5;
+  int32 n = 6;
+}
+
+message AggregateResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    ERROR = 2;
+  }
+
+  Status status = 1;
+  bytes signature = 2;
+}

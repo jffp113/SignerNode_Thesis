@@ -2,7 +2,7 @@ package smartcontractengine
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ipfs/go-log"
+	"github.com/ipfs/go-log/v2"
 	"github.com/jffp113/SignerNode_Thesis/messaging"
 	"github.com/jffp113/SignerNode_Thesis/smartcontractengine/pb"
 	zmq "github.com/pebbe/zmq4"

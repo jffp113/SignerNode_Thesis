@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"github.com/ipfs/go-log"
+	"github.com/ipfs/go-log/v2"
 	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"io/ioutil"
 	"net/http"
