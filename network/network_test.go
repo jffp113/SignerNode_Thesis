@@ -16,6 +16,8 @@ func TestBroadcastToTwoPeers(t *testing.T) {
 
 	config := NetConfig{
 		BootstrapPeers: []string{"/ip4/127.0.0.1/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B"},
+		PeerAddress: "/ip4/127.0.0.1/tcp/",
+		Port: 0,
 	}
 	net1, err := CreateNetwork(ctx, config)
 	assert.Nil(t, err)
@@ -33,8 +35,8 @@ func TestBroadcastToTwoPeers(t *testing.T) {
 	failWithTimeOut(t, 5*time.Second, func() {
 		r2 := net2.Receive()
 		r1 := net3.Receive()
-		assert.Equal(t, r2, content)
-		assert.Equal(t, r1, content)
+		assert.Equal(t, r2.GetData(), content)
+		assert.Equal(t, r1.GetData(), content)
 	})
 }
 
@@ -45,6 +47,8 @@ func TestBroadcastToGroup(t *testing.T) {
 
 	config := NetConfig{
 		BootstrapPeers: []string{"/ip4/127.0.0.1/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B"},
+		PeerAddress: "/ip4/127.0.0.1/tcp/",
+		Port: 0,
 	}
 	net1, err := CreateNetwork(ctx, config)
 	assert.Nil(t, err)
@@ -70,8 +74,8 @@ func TestBroadcastToGroup(t *testing.T) {
 	failWithTimeOut(t, 5*time.Second, func() {
 		r2 := net2.Receive()
 		r3 := net3.Receive()
-		assert.Equal(t, r2, content)
-		assert.Equal(t, r3, content)
+		assert.Equal(t, r2.GetData(), content)
+		assert.Equal(t, r3.GetData(), content)
 	})
 
 	err = net2.LeaveGroup(groupName)
@@ -81,7 +85,7 @@ func TestBroadcastToGroup(t *testing.T) {
 
 	failWithTimeOut(t, 5*time.Second, func() {
 		r3 := net3.Receive()
-		assert.Equal(t, r3, content)
+		assert.Equal(t, r3.GetData(), content)
 	})
 
 	passIfTimeOut(t, 2*time.Second, func() {
@@ -98,6 +102,7 @@ func createBootstrapPeer(ctx context.Context) {
 	NewBootstrapNode(ctx, NetConfig{
 		RendezvousString: "",
 		Port:             55000,
+		PeerAddress: 	"/ip4/127.0.0.1/tcp/",
 		Priv:             priv,
 	})
 

@@ -20,12 +20,15 @@ func TestNewDiscovery(t *testing.T) {
 	defer cancel()
 	NewBootstrapNode(ctx, NetConfig{
 		RendezvousString: "",
+		PeerAddress: "/ip4/127.0.0.1/tcp/",
 		Port:             55000,
 		Priv:             priv,
 	})
 
 	config := NetConfig{
-		BootstrapPeers: []string{"/ip4/127.0.0.1/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B"},
+		BootstrapPeers:   []string{"/ip4/127.0.0.1/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B"},
+		PeerAddress: "/ip4/127.0.0.1/tcp/",
+		Port: 0,
 	}
 
 	//Lets first create a new peer discovery
