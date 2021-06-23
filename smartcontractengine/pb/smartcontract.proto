@@ -16,6 +16,13 @@ syntax = "proto3";
 
 option go_package = "pb";
 
+// The messageType passed between the smartcontract client and smartcontract engine
+enum MessageType {
+    DEFAULT = 0;
+    SMART_CONTRACT_VALIDATE_REQUEST = 1000;
+    SMART_CONTRACT_VALIDATE_RESPONSE = 1001;
+}
+
 message SmartContractValidationRequest {
   bytes Payload = 1;
   string SmartContractAddress = 2;
@@ -33,19 +40,4 @@ message SmartContractValidationResponse {
   string SignatureScheme = 2;
   int32  N = 3;
   int32  T = 4;
-}
-
-message SmartContractRegisterRequest {
-  string SmartContractAddress = 1;
-}
-
-message SmartContractRegisterResponse {
-  enum Status {
-    STATUS_UNSET = 0;
-    OK = 1;
-    INVALID_TRANSACTION = 2;
-    INTERNAL_ERROR = 3;
-  }
-
-  Status status = 1;
 }

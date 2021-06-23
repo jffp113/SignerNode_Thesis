@@ -72,7 +72,8 @@ github.com/jffp113/CryptoProviderSDK/client
 github.com/jffp113/CryptoProviderSDK/crypto
 github.com/jffp113/CryptoProviderSDK/crypto/pb
 github.com/jffp113/CryptoProviderSDK/keychain
-# github.com/jffp113/go-util v0.0.3
+# github.com/jffp113/go-util v0.0.5
+## explicit
 github.com/jffp113/go-util/messaging
 github.com/jffp113/go-util/messaging/routerdealerhandlers/handlerClient
 github.com/jffp113/go-util/messaging/routerdealerhandlers/pb
@@ -238,7 +239,6 @@ github.com/opentracing/opentracing-go
 github.com/opentracing/opentracing-go/ext
 github.com/opentracing/opentracing-go/log
 # github.com/pebbe/zmq4 v1.2.5
-## explicit
 github.com/pebbe/zmq4
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
