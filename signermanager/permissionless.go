@@ -31,7 +31,12 @@ type permissionlessProtocol struct {
 
 	interconnect     ic.Interconnect
 	broadcastAnswer  bool
+
+	//deleteStaleReqCh signals a request that has timeout
 	deleteStaleReqCh chan string
+
+	//deleteStaleKeyCh signals a key that should be garbage collected
+	deleteStaleKeyCh chan string
 }
 
 func (p *permissionlessProtocol) Register(interconnect ic.Interconnect) error {
@@ -111,6 +116,11 @@ func (p *permissionlessProtocol) deleteRequestToKey(requestUUID string) {
 
 func (p *permissionlessProtocol) addInstalledKey(keyID string, info *keyInfo) {
 	p.installedKeys.Store(keyID, info)
+	timeout := time.Until(info.validUntil)
+	time.AfterFunc(timeout, func() {
+		p.deleteStaleKeyCh <- keyID
+	})
+
 }
 
 func (p *permissionlessProtocol) getInstalledKey(keyId string) (*keyInfo, bool) {
@@ -378,30 +388,13 @@ func (p *permissionlessProtocol) installShares(msg ic.ICMessage, ctx ic.P2pConte
 	return ic.CreateOkMessage([]byte{})
 }
 
-//ShareGarbageCollector removes stale key shares
-//TODO not used? what
-func (p *permissionlessProtocol) ShareGarbageCollector() {
-	var toDeleteKeys []string
-
-	appendToDelete := func(toDelete interface{}) {
-		toDeleteKeys = append(toDeleteKeys, toDelete.(string))
+// ShareGarbageCollector removes stale key shares
+func (p *permissionlessProtocol) ShareGarbageCollector(deleteStaleKeyCh chan string) {
+	for keyId := range deleteStaleKeyCh {
+		logger.Info("Removing key share with Id: ", keyId)
+		p.network.LeaveGroup(keyId)
+		p.deleteInstalledKey(keyId)
 	}
-
-	p.installedKeys.Range(func(key, value interface{}) bool {
-		keyInfo := value.(*keyInfo)
-
-		if keyInfo.expired() {
-			appendToDelete(key)
-		}
-
-		return true
-	})
-
-	for _, v := range toDeleteKeys {
-		p.network.LeaveGroup(v)
-		p.deleteInstalledKey(v)
-	}
-
 }
 
 func NewPermissionlessProtocol(crypto crypto.ContextFactory, sc smartcontractengine.SCContextFactory,
@@ -417,9 +410,10 @@ func NewPermissionlessProtocol(crypto crypto.ContextFactory, sc smartcontracteng
 		network:          network,
 		broadcastAnswer:  broadcastAnswer,
 		deleteStaleReqCh: make(chan string,1),
+		deleteStaleKeyCh: make(chan string,1),
 	}
 
 	go deleteNoneCompleteRequests(&p.requests, p.deleteStaleReqCh, context.TODO())
-
+	go p.ShareGarbageCollector(p.deleteStaleKeyCh)
 	return &p
 }

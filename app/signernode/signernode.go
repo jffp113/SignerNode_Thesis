@@ -1,11 +1,13 @@
 package main
 
 import (
+	_ "expvar"
 	"fmt"
 	"github.com/ipfs/go-log/v2"
 	"github.com/jessevdk/go-flags"
 	"github.com/jffp113/SignerNode_Thesis/api"
 	"github.com/jffp113/SignerNode_Thesis/signermanager"
+	_ "net/http/pprof"
 	"os"
 )
 

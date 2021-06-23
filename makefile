@@ -28,10 +28,10 @@ stop-permissioned:
 	docker-compose  -f Docker/docker-compose.yaml down
 
 run-permissionless:
-	docker-compose -f Docker/docker-compose-permissionless.yaml up
+	docker-compose -f Docker/docker-compose-permissionless.yaml up -d
 
-stop-permissionless:
-	docker-compose -f Docker/docker-compose-permissionless.yaml up
+*stop-permissionless:
+	docker-compose -f Docker/docker-compose-permissionless.yaml down
 
 # ==============================================================================
 # Modules support
