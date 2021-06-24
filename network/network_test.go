@@ -40,6 +40,35 @@ func TestBroadcastToTwoPeers(t *testing.T) {
 	})
 }
 
+func TestDirectMessageBetweenTwoPeers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	createBootstrapPeer(ctx)
+
+	config := NetConfig{
+		BootstrapPeers: []string{"/ip4/127.0.0.1/tcp/55000/p2p/12D3KooWD1yUy23iVGYCYMZdm2fUy65WFaAc2H2i7ycBT3oJdN1B"},
+		PeerAddress: "/ip4/127.0.0.1/tcp/",
+		Port: 0,
+	}
+	net1, err := CreateNetwork(ctx, config)
+	assert.Nil(t, err)
+	net2, err := CreateNetwork(ctx, config)
+	network := net2.(*network)
+	assert.Nil(t, err)
+
+	time.Sleep(2 * time.Second)
+
+	content := []byte{123}
+
+	err = net1.Send(content,string(network.self))
+	assert.Nil(t, err)
+
+	failWithTimeOut(t, 5*time.Second, func() {
+		r2 := net2.Receive()
+		assert.Equal(t, r2.GetData(), content)
+	})
+}
+
 func TestBroadcastToGroup(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

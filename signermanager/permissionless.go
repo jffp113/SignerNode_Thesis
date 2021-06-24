@@ -221,7 +221,6 @@ func (p *permissionlessProtocol) processMessageSignResponse(data []byte, ctx ic.
 	//Check if can aggregate if yes start other
 	if v, ready := p.AddSigAndTestForEnoughShares(signatureMsg.Signature, signatureMsg.UUID); ready {
 		firstExec := true
-		//Todo add context with timer
 		for {
 			if !firstExec {
 				select {
