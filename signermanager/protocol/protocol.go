@@ -1,8 +1,9 @@
-package signermanager
+package protocol
 
 import (
 	"context"
 	"errors"
+	"github.com/ipfs/go-log/v2"
 	"github.com/jffp113/CryptoProviderSDK/crypto"
 	"github.com/jffp113/CryptoProviderSDK/keychain"
 	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
@@ -12,6 +13,8 @@ import (
 	"sync"
 	"time"
 )
+
+var logger = log.Logger("protocol")
 
 const PERMISSIONED = "Permissioned"
 const PERMISSIONLESS = "Permissionless"

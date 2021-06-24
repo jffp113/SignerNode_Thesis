@@ -1,4 +1,4 @@
-package signermanager
+package protocol
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package signermanager
+package protocol
 
 import (
 	"github.com/golang/protobuf/proto"
@@ -26,21 +26,21 @@ type ManagerResponse struct {
 
 //SignerManager
 
-func createInvalidMessageVerifyResponse() ic.HandlerResponse {
+func CreateInvalidMessageVerifyResponse() ic.HandlerResponse {
 	logger.Debug("Creating invalid verify response")
 	msg := pb.ClientVerifyResponse{Status: pb.ClientVerifyResponse_INVALID}
 	b, _ := proto.Marshal(&msg)
 	return ic.CreateOkMessage(b)
 }
 
-func createValidMessageVerifyMessages() ic.HandlerResponse {
+func CreateValidMessageVerifyMessages() ic.HandlerResponse {
 	logger.Debug("Creating valid verify response")
 	msg := pb.ClientVerifyResponse{Status: pb.ClientVerifyResponse_OK}
 	b, _ := proto.Marshal(&msg)
 	return ic.CreateOkMessage(b)
 }
 
-func createValidMembershipResponse(addrs []peer.AddrInfo) ic.HandlerResponse {
+func CreateValidMembershipResponse(addrs []peer.AddrInfo) ic.HandlerResponse {
 	var peers []*pb.MembershipResponsePeer
 
 	for _, v := range addrs {

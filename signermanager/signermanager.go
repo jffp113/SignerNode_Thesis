@@ -9,6 +9,7 @@ import (
 	ic "github.com/jffp113/SignerNode_Thesis/interconnect"
 	"github.com/jffp113/SignerNode_Thesis/network"
 	"github.com/jffp113/SignerNode_Thesis/signermanager/pb"
+	"github.com/jffp113/SignerNode_Thesis/signermanager/protocol"
 	"github.com/jffp113/SignerNode_Thesis/smartcontractengine"
 	ctx "golang.org/x/net/context"
 )
@@ -16,7 +17,7 @@ import (
 const DefaultNumberOfWorkers = 10
 const MessageWorkerChanSize = 20
 
-var logger = log.Logger("protocol")
+var logger = log.Logger("signermanager")
 
 type signermanager struct {
 	// URL for the bootstrap to connect find
@@ -30,7 +31,7 @@ type signermanager struct {
 
 	//Protocol for choosing who signs
 	protocolName string
-	protocol     Protocol
+	protocol     protocol.Protocol
 
 	//P2P Network
 	network network.Network
@@ -103,7 +104,7 @@ func (s *signermanager) Init() error {
 		return err
 	}
 
-	p, err := GetProtocol(s.protocolName, s.cryptoFactory, s.keychain, s.scFactory, s.network, s.broadcastAnswer)
+	p, err := protocol.GetProtocol(s.protocolName, s.cryptoFactory, s.keychain, s.scFactory, s.network, s.broadcastAnswer)
 
 	if err != nil {
 		return err
@@ -149,14 +150,14 @@ func (s *signermanager) verify(m ic.ICMessage, ctx ic.P2pContext) ic.HandlerResp
 	err = context.Verify(msg.Signature, msg.Digest, pubKey)
 
 	if err != nil {
-		return createInvalidMessageVerifyResponse()
+		return protocol.CreateInvalidMessageVerifyResponse()
 	}
 
-	return createValidMessageVerifyMessages()
+	return protocol.CreateValidMessageVerifyMessages()
 }
 
 func (s *signermanager) getMembership(_ ic.ICMessage, _ ic.P2pContext) ic.HandlerResponse {
-	return createValidMembershipResponse(s.network.GetMembership())
+	return protocol.CreateValidMembershipResponse(s.network.GetMembership())
 }
 
 func (s *signermanager) startWorkers() {
